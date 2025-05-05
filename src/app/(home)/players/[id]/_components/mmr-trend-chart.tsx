@@ -28,9 +28,18 @@ export function MmrTrendChart({ games }: { games: SelectGames[] }) {
     .filter((game) => game.gameType === 'ranked')
     .map((game) => ({
       date: game.gameTime,
-      mmr: game.playerMmr,
+      mmr: game.playerMmr + game.mmrChange,
+      mmrBefore: game.playerMmr,
     }))
     .sort((a, b) => a.date.getTime() - b.date.getTime())
+  const firstGame = chartData[0]
+  if (firstGame) {
+    chartData.unshift({
+      date: firstGame.date,
+      mmr: firstGame.mmrBefore,
+      mmrBefore: firstGame.mmrBefore,
+    })
+  }
   return (
     <Card>
       <CardHeader>
