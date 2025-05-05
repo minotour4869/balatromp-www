@@ -453,7 +453,6 @@ export default function LogParser() {
             const cardRaw = cardMatch?.[1]?.trim() ?? 'Unknown Card'
             const cardClean = cardRaw.replace(/^(c_mp_|j_mp_)/, '')
             const cost = costMatch?.[1] ? Number.parseInt(costMatch[1], 10) : 0
-            if (cost > 0) currentGame.moneySpent += cost
             currentGame.events.push({
               timestamp,
               text: `Bought ${cardClean}${cost > 0 ? ` for $${cost}` : ''}`,
@@ -465,7 +464,6 @@ export default function LogParser() {
             if (costMatch?.[1]) {
               const cost = Number.parseInt(costMatch[1], 10)
               if (!Number.isNaN(cost)) {
-                currentGame.moneySpent += cost
                 currentGame.events.push({
                   timestamp,
                   text: `Rerolled shop for $${cost}`,
