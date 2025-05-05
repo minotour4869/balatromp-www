@@ -582,7 +582,7 @@ export default function LogParser() {
 
         {parsedGames.length > 0 && (
           <Tabs defaultValue={defaultTabValue} className='mt-6 w-full'>
-            <TabsList className='grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
+            <TabsList className='grid h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
               {parsedGames.map((game) => {
                 // Determine labels for the tab trigger, handling potential name conflicts
                 const useGenericLabels =
