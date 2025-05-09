@@ -124,3 +124,16 @@ export const verificationTokens = pgTable(
   }),
   (t) => [primaryKey({ columns: [t.identifier, t.token] })]
 )
+
+export const releases = pgTable('mod_release', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  name: text('name').notNull(),
+  description: text('description'),
+  version: text('version').notNull(),
+  url: text('url').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
