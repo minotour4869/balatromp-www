@@ -32,6 +32,11 @@ import { PlayerSelector } from './player-selector'
 
 const obs = new OBSController()
 
+type Commentator = {
+  id: string
+  name: string
+}
+
 export function ObsControlPanelClient() {
   useEffect(() => {
     if (window.location.protocol === 'https:') {
@@ -41,7 +46,10 @@ export function ObsControlPanelClient() {
     }
   }, [])
   const [isConnected, setIsConnected] = useState(false)
-
+  const [commentators, setCommentators] = useLocalStorage<Commentator[]>(
+    'commentators',
+    []
+  )
   const players = api.leaderboard.get_leaderboard.useQuery({
     channel_id: RANKED_CHANNEL,
   })
@@ -297,6 +305,47 @@ export function ObsControlPanelClient() {
             <Input {...form.register('player2WinRate')} />
           </div>
         </div>
+        <div className={'mt-4 space-y-4'}>
+          <h2 className={'text-xl'}>Commentators</h2>
+          <div className={'grid grid-cols-1 gap-2'}>
+            <Label>Commentator 1</Label>
+            <Select
+              value={form.watch('commentator1')}
+              onValueChange={(value) => form.setValue('commentator1', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='Select commentator' />
+              </SelectTrigger>
+              <SelectContent>
+                {commentators.map((commentator) => (
+                  <SelectItem key={commentator.id} value={commentator.name}>
+                    {commentator.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className={'grid grid-cols-1 gap-2'}>
+            <Label>Commentator 2</Label>
+            <Select
+              value={form.watch('commentator2')}
+              onValueChange={(value) => form.setValue('commentator2', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='Select commentator' />
+              </SelectTrigger>
+              <SelectContent>
+                {commentators.map((commentator) => (
+                  <SelectItem key={commentator.id} value={commentator.name}>
+                    {commentator.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <Button type={'submit'} className={'mt-4'}>
           Ship it
         </Button>
@@ -316,6 +365,12 @@ type FormField = {
 function Settings() {
   const [isLoading, setIsLoading] = useState(true)
   const [obsSources, setObsSources] = useState<string[]>([])
+  const [commentators, setCommentators] = useLocalStorage<Commentator[]>(
+    'commentators',
+    []
+  )
+  const [newCommentatorName, setNewCommentatorName] = useState('')
+
   const [mappings, setMappings] = useLocalStorage<FieldMapping[]>(
     'obs-field-mappings',
     []
@@ -335,7 +390,23 @@ function Settings() {
     { id: 'player2Rank', label: 'Player 2 - Rank' },
     { id: 'player1WinRate', label: 'Player 1 - Win Rate' },
     { id: 'player2WinRate', label: 'Player 2 - Win Rate' },
+    { id: 'commentator1', label: 'Commentator 1' },
+    { id: 'commentator2', label: 'Commentator 2' },
   ]
+  const addCommentator = () => {
+    if (newCommentatorName.trim()) {
+      setCommentators([
+        ...commentators,
+        { id: crypto.randomUUID(), name: newCommentatorName.trim() },
+      ])
+      setNewCommentatorName('')
+    }
+  }
+
+  const removeCommentator = (id: string) => {
+    setCommentators(commentators.filter((c) => c.id !== id))
+  }
+
   useEffect(() => {
     async function fetchSources() {
       try {
@@ -443,6 +514,42 @@ function Settings() {
           No mappings configured. Add one to get started.
         </div>
       )}
+      <div className='mt-8 space-y-4'>
+        <h3 className='font-medium text-lg'>Commentators</h3>
+
+        <div className='flex gap-2'>
+          <Input
+            value={newCommentatorName}
+            onChange={(e) => setNewCommentatorName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                addCommentator()
+                e.preventDefault()
+              }
+            }}
+            placeholder='Enter commentator name'
+          />
+          <Button onClick={addCommentator}>Add</Button>
+        </div>
+
+        <div className='space-y-2'>
+          {commentators.map((commentator) => (
+            <div
+              key={commentator.id}
+              className='flex items-center justify-between rounded p-2'
+            >
+              <span>{commentator.name}</span>
+              <Button
+                variant='destructive'
+                size='icon'
+                onClick={() => removeCommentator(commentator.id)}
+              >
+                <X className='h-4 w-4' />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
