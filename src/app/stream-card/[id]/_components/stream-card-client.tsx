@@ -38,7 +38,7 @@ export function getPlayerData(
   const meaningful_games = games_played - ties
 
   return {
-    username: currentName,
+    username: currentName ?? 'Unknown',
     games: games_played,
     meaningful_games,
     wins,

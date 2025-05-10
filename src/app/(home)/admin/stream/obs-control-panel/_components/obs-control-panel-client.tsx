@@ -131,49 +131,34 @@ export function ObsControlPanelClient() {
 
   useEffect(() => {
     if (!isConnected) return
-    if (player1Data?.username) {
+
+    if (player1Data) {
       form.setValue('player1Name', player1Data.username)
-    }
-    if (player2Data?.username) {
-      form.setValue('player2Name', player2Data.username)
-    }
-    if (player1Data?.mmr) {
       form.setValue('player1Mmr', player1Data.mmr.toString())
-    }
-    if (player2Data?.mmr) {
-      form.setValue('player2Mmr', player2Data.mmr.toString())
-    }
-    if (player1Data?.games) {
       form.setValue('player1Games', player1Data.games.toString())
-    }
-    if (player2Data?.games) {
-      form.setValue('player2Games', player2Data.games.toString())
-    }
-    if (player1Data?.wins) {
       form.setValue('player1Wins', player1Data.wins.toString())
-    }
-    if (player2Data?.wins) {
-      form.setValue('player2Wins', player2Data.wins.toString())
-    }
-    if (player1Data?.losses) {
       form.setValue('player1Losses', player1Data.losses.toString())
-    }
-    if (player2Data?.losses) {
-      form.setValue('player2Losses', player2Data.losses.toString())
-    }
-    if (player1Data?.rank) {
       form.setValue('player1Rank', player1Data.rank.toString())
-    }
-    if (player2Data?.rank) {
-      form.setValue('player2Rank', player2Data.rank.toString())
-    }
-    if (player1Data?.winRate) {
       form.setValue('player1WinRate', `${player1Data.winRate.toString()}%`)
     }
-    if (player2Data?.winRate) {
-      form.setValue('player2WinRate', `${player2Data.winRate.toString()}%`)
+  }, [player1Data, isConnected])
+
+  // Effect to update Player 2 form fields when player2 selection or data changes
+  useEffect(() => {
+    if (!isConnected) return
+
+    if (player2Data) {
+      if (player2Data) {
+        form.setValue('player2Name', player2Data.username)
+        form.setValue('player2Mmr', player2Data.mmr.toString())
+        form.setValue('player2Games', player2Data.games.toString())
+        form.setValue('player2Wins', player2Data.wins.toString())
+        form.setValue('player2Losses', player2Data.losses.toString())
+        form.setValue('player2Rank', player2Data.rank.toString())
+        form.setValue('player2WinRate', `${player2Data.winRate.toString()}%`)
+      }
     }
-  }, [player1Data, player2Data, isConnected])
+  }, [player2Data, isConnected])
 
   const [mappings] = useLocalStorage<FieldMapping[]>('obs-field-mappings', [])
 
