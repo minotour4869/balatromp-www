@@ -1,4 +1,5 @@
 import '@/styles/globals.css'
+import { Toaster } from '@/components/ui/sonner'
 import { TRPCReactProvider } from '@/trpc/react'
 import { Banner } from 'fumadocs-ui/components/banner'
 import { RootProvider } from 'fumadocs-ui/provider'
@@ -51,6 +52,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={'flex min-h-screen flex-col'}>
+        <Toaster />
         {/*<Banner id={'v0.2.4'} variant={'rainbow'}>*/}
         {/*  Version 0.2.4 is out!*/}
         {/*  <a*/}

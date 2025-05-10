@@ -9,7 +9,7 @@ import { Swords } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { type ComponentPropsWithoutRef, useEffect, useState } from 'react'
 
-function getPlayerData(
+export function getPlayerData(
   playerLeaderboardEntry: LeaderboardEntry,
   games: SelectGames[]
 ) {
@@ -256,17 +256,14 @@ function PlayerInfo({
           isReverse && 'border-r'
         )}
       >
-        <div className='flex items-center'>
-          <div className='ml-0.5 font-bold text-emerald-400'>
-            {playerData.wins}W
-          </div>
+        <div className='ml-0.5 font-bold text-emerald-400'>
+          {playerData.wins}W
         </div>
         |
-        <div className='flex items-center'>
-          <div className='ml-0.5 font-bold text-rose-400'>
-            {playerData.losses}L
-          </div>
+        <div className='ml-0.5 font-bold text-rose-400'>
+          {playerData.losses}L
         </div>
+        <div className='ml-0.5 '>({playerData.winRate}%)</div>
       </div>
       {isInBattle && (
         <div
