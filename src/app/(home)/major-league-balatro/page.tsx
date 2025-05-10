@@ -17,17 +17,16 @@ export default function MLBPage() {
   const nextMatch = matches
     .filter((match) => !match.completed && match.datetime > currentDate)
     .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())[0]
-  if (!nextMatch) {
-    return 'All matches have been played'
-  }
 
   return (
     <div className='flex min-h-screen flex-col'>
       <main className='flex-1'>
         <HeroSection />
-        <TimeZoneProvider>
-          <NextMatchInfo nextMatch={nextMatch} />
-        </TimeZoneProvider>
+        {nextMatch && (
+          <TimeZoneProvider>
+            <NextMatchInfo nextMatch={nextMatch} />
+          </TimeZoneProvider>
+        )}
         {/*<Standings />*/}
 
         <TournamentFormat />
