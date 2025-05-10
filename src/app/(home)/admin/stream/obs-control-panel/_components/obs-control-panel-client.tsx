@@ -24,7 +24,7 @@ import { RANKED_CHANNEL } from '@/shared/constants'
 import { api } from '@/trpc/react'
 import { SettingsIcon, X } from 'lucide-react'
 import * as React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useLocalStorage } from 'usehooks-ts'
@@ -100,14 +100,17 @@ export function ObsControlPanelClient() {
     },
     { enabled: !!value2 }
   )
-  const player1Data =
-    player1Info && player1Games
+  const player1Data = useMemo(() => {
+    return player1Info && player1Games
       ? getPlayerData(player1Info, player1Games)
       : null
-  const player2Data =
-    player2Info && player2Games
+  }, [player1Info, player1Games])
+  const player2Data = useMemo(() => {
+    return player2Info && player2Games
       ? getPlayerData(player2Info, player2Games)
       : null
+  }, [player2Info, player2Games])
+
   let winsVsOpponent = 0
   let lossesVsOpponent = 0
   if (value1 && player1Games && value2) {
@@ -148,15 +151,13 @@ export function ObsControlPanelClient() {
     if (!isConnected) return
 
     if (player2Data) {
-      if (player2Data) {
-        form.setValue('player2Name', player2Data.username)
-        form.setValue('player2Mmr', player2Data.mmr.toString())
-        form.setValue('player2Games', player2Data.games.toString())
-        form.setValue('player2Wins', player2Data.wins.toString())
-        form.setValue('player2Losses', player2Data.losses.toString())
-        form.setValue('player2Rank', player2Data.rank.toString())
-        form.setValue('player2WinRate', `${player2Data.winRate.toString()}%`)
-      }
+      form.setValue('player2Name', player2Data.username)
+      form.setValue('player2Mmr', player2Data.mmr.toString())
+      form.setValue('player2Games', player2Data.games.toString())
+      form.setValue('player2Wins', player2Data.wins.toString())
+      form.setValue('player2Losses', player2Data.losses.toString())
+      form.setValue('player2Rank', player2Data.rank.toString())
+      form.setValue('player2WinRate', `${player2Data.winRate.toString()}%`)
     }
   }, [player2Data, isConnected])
 
