@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -450,107 +451,108 @@ function Settings() {
 
   return (
     <div className='space-y-4'>
-      <div className='flex items-center justify-between'>
+      <div className='flex items-center justify-between px-4'>
         <h3 className='font-medium text-lg'>Field Mappings</h3>
         <Button onClick={addMapping} size='sm'>
           Add Mapping
         </Button>
       </div>
-
-      <div className='space-y-2'>
-        {mappings.map((mapping, index) => (
-          <div key={index} className='flex items-center gap-2'>
-            <Select
-              value={mapping.formField}
-              onValueChange={(value) =>
-                updateMapping(index, 'formField', value)
-              }
-            >
-              <SelectTrigger className='w-[200px]'>
-                <SelectValue placeholder='Select field'>
-                  {formFields.find((f) => f.id === mapping.formField)?.label ||
-                    'Select field'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {formFields.map((field) => (
-                  <SelectItem key={field.id} value={field.id}>
-                    {field.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={mapping.obsSource}
-              onValueChange={(value) =>
-                updateMapping(index, 'obsSource', value)
-              }
-            >
-              <SelectTrigger className='w-[200px]'>
-                <SelectValue placeholder='Select OBS source' />
-              </SelectTrigger>
-              <SelectContent>
-                {obsSources.map((source) => (
-                  <SelectItem key={source} value={source}>
-                    {source}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant='destructive'
-              size='icon'
-              onClick={() => removeMapping(index)}
-            >
-              <X className='h-4 w-4' />
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      {mappings.length === 0 && (
-        <div className='py-4 text-center text-muted-foreground'>
-          No mappings configured. Add one to get started.
-        </div>
-      )}
-      <div className='mt-8 space-y-4'>
-        <h3 className='font-medium text-lg'>Commentators</h3>
-
-        <div className='flex gap-2'>
-          <Input
-            value={newCommentatorName}
-            onChange={(e) => setNewCommentatorName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addCommentator()
-                e.preventDefault()
-              }
-            }}
-            placeholder='Enter commentator name'
-          />
-          <Button onClick={addCommentator}>Add</Button>
-        </div>
-
+      <ScrollArea className='h-[500px] p-4'>
         <div className='space-y-2'>
-          {commentators.map((commentator) => (
-            <div
-              key={commentator.id}
-              className='flex items-center justify-between rounded p-2'
-            >
-              <span>{commentator.name}</span>
+          {mappings.map((mapping, index) => (
+            <div key={index} className='flex items-center gap-2'>
+              <Select
+                value={mapping.formField}
+                onValueChange={(value) =>
+                  updateMapping(index, 'formField', value)
+                }
+              >
+                <SelectTrigger className='w-[200px]'>
+                  <SelectValue placeholder='Select field'>
+                    {formFields.find((f) => f.id === mapping.formField)
+                      ?.label || 'Select field'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {formFields.map((field) => (
+                    <SelectItem key={field.id} value={field.id}>
+                      {field.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={mapping.obsSource}
+                onValueChange={(value) =>
+                  updateMapping(index, 'obsSource', value)
+                }
+              >
+                <SelectTrigger className='w-[200px]'>
+                  <SelectValue placeholder='Select OBS source' />
+                </SelectTrigger>
+                <SelectContent>
+                  {obsSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 variant='destructive'
                 size='icon'
-                onClick={() => removeCommentator(commentator.id)}
+                onClick={() => removeMapping(index)}
               >
                 <X className='h-4 w-4' />
               </Button>
             </div>
           ))}
         </div>
-      </div>
+
+        {mappings.length === 0 && (
+          <div className='py-4 text-center text-muted-foreground'>
+            No mappings configured. Add one to get started.
+          </div>
+        )}
+        <div className='mt-8 space-y-4'>
+          <h3 className='font-medium text-lg'>Commentators</h3>
+
+          <div className='flex gap-2'>
+            <Input
+              value={newCommentatorName}
+              onChange={(e) => setNewCommentatorName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  addCommentator()
+                  e.preventDefault()
+                }
+              }}
+              placeholder='Enter commentator name'
+            />
+            <Button onClick={addCommentator}>Add</Button>
+          </div>
+
+          <div className='space-y-2'>
+            {commentators.map((commentator) => (
+              <div
+                key={commentator.id}
+                className='flex items-center justify-between rounded p-2'
+              >
+                <span>{commentator.name}</span>
+                <Button
+                  variant='destructive'
+                  size='icon'
+                  onClick={() => removeCommentator(commentator.id)}
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   )
 }
