@@ -28,6 +28,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useLocalStorage } from 'usehooks-ts'
+import { v4 } from 'uuid'
 import { PlayerSelector } from './player-selector'
 
 const obs = new OBSController()
@@ -397,7 +398,7 @@ function Settings() {
     if (newCommentatorName.trim()) {
       setCommentators([
         ...commentators,
-        { id: crypto.randomUUID(), name: newCommentatorName.trim() },
+        { id: v4(), name: newCommentatorName.trim() },
       ])
       setNewCommentatorName('')
     }
