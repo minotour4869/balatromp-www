@@ -33,6 +33,13 @@ import { PlayerSelector } from './player-selector'
 const obs = new OBSController()
 
 export function ObsControlPanelClient() {
+  useEffect(() => {
+    if (window.location.protocol === 'https:') {
+      toast.error('OBS controls require HTTP', {
+        description: 'Please use http:// version of the site for OBS controls',
+      })
+    }
+  }, [])
   const [isConnected, setIsConnected] = useState(false)
 
   const players = api.leaderboard.get_leaderboard.useQuery({
