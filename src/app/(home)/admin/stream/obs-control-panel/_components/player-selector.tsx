@@ -52,8 +52,10 @@ function PlayerSelectorRaw({
       </PopoverTrigger>
       <PopoverContent className='w-[200px] p-0'>
         <Command
-          filter={(value, search) => {
+          filter={(value, search, keywords) => {
             if (value.toLowerCase().includes(search.toLowerCase())) return 1
+            const name = keywords?.[0]
+            if (name?.toLowerCase().includes(search.toLowerCase())) return 1
             return 0
           }}
         >
@@ -65,6 +67,7 @@ function PlayerSelectorRaw({
                 <CommandItem
                   key={`${player.value}-2`}
                   value={player.value}
+                  keywords={[player.label]}
                   onSelect={(currentValue) => {
                     onValueChange(currentValue === value ? '' : currentValue)
                     onOpenChange(false)
