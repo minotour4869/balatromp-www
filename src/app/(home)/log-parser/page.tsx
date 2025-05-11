@@ -545,7 +545,7 @@ export default function LogParser() {
   // Generate a default tab value using determined names or fallbacks
   const defaultTabValue =
     parsedGames.length > 0
-      ? `game-${parsedGames![0]!.id}-${parsedGames![0]!.logOwnerName || 'LogOwner'}-vs-${parsedGames![0]!.opponentName || 'Opponent'}`
+      ? `game-${parsedGames!.at(-1)!.id}-${parsedGames!.at(-1)!.logOwnerName || 'LogOwner'}-vs-${parsedGames!.at(-1)!.opponentName || 'Opponent'}`
       : ''
 
   return (
