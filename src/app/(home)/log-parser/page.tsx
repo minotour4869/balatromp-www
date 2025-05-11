@@ -83,6 +83,7 @@ type Game = {
   logOwnerFinalJokers: string[] // Log owner's final jokers
   opponentFinalJokers: string[] // Opponent's final jokers
   events: LogEvent[]
+  rerolls: number
 }
 
 // Helper to initialize a new game object
@@ -111,6 +112,7 @@ const initGame = (id: number, startDate: Date): Game => ({
   logOwnerFinalJokers: [],
   opponentFinalJokers: [],
   events: [],
+  rerolls: 0,
 })
 
 // Helper to format duration
@@ -471,6 +473,7 @@ export default function LogParser() {
                 })
               }
             }
+            currentGame.rerolls++
           } else if (lineLower.includes('usedcard')) {
             // Log owner used card
             const match = line.match(/card:([^,\n]+)/i)
@@ -661,6 +664,10 @@ export default function LogParser() {
                                   ? 'Host'
                                   : 'Guest'}{' '}
                               ({ownerLabel})
+                            </p>
+                            <p>
+                              <strong>Rerolls:</strong>{' '}
+                              {game.rerolls || 'Unknown'}
                             </p>
                             <p>
                               <strong>Deck:</strong> {game.deck || 'Unknown'}
