@@ -10,7 +10,6 @@ import { z } from 'zod'
 export const releasesRouter = createTRPCRouter({
   getReleases: publicProcedure.query(async () => {
     const res = await db.select().from(releases)
-    console.log(res)
     return res
   }),
   addRelease: adminProcedure
