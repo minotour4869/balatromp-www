@@ -44,6 +44,7 @@ import {
   ShieldHalf,
   Star,
   Trophy,
+  UserIcon,
 } from 'lucide-react'
 import { ExternalIcon } from 'next/dist/client/components/react-dev-overlay/ui/icons/external'
 import Link from 'next/link'
@@ -156,6 +157,10 @@ export function UserInfo() {
     .filter((game) => game.gameType.toLowerCase() === 'vanilla')
     .at(0)
 
+  const avgOpponentMmr =
+    games
+      .filter((g) => g.result !== 'tie')
+      .reduce((acc, g) => acc + g.opponentMmr, 0) / meaningful_games
   return (
     <div className='flex flex-1 flex-col overflow-hidden'>
       <div className='mx-auto flex w-[calc(100%-1rem)] max-w-fd-container flex-1 flex-col'>
@@ -251,11 +256,11 @@ export function UserInfo() {
             <div
               className={cn(
                 'grid w-full flex-grow grid-cols-2 divide-gray-100 md:w-auto md:grid-cols-3 md:divide-y-0 dark:divide-zinc-800',
-                isNonNullish(rankedUserRank?.mmr) && 'lg:grid-cols-4',
-                isNonNullish(vanillaUserRank?.mmr) && 'lg:grid-cols-4',
+                isNonNullish(rankedUserRank?.mmr) && 'lg:grid-cols-5',
+                isNonNullish(vanillaUserRank?.mmr) && 'lg:grid-cols-5',
                 isNonNullish(rankedUserRank?.mmr) &&
                   isNonNullish(vanillaUserRank?.mmr) &&
-                  'lg:grid-cols-5'
+                  'lg:grid-cols-6'
               )}
             >
               <StatsCard
@@ -278,6 +283,7 @@ export function UserInfo() {
                 description={`${profileData.lossRate}% loss rate`}
                 accentColor='text-rose-500'
               />
+
               {isNonNullish(rankedUserRank?.mmr) && (
                 <StatsCard
                   title='Ranked MMR'
@@ -354,6 +360,13 @@ export function UserInfo() {
                   }
                 />
               )}
+              <StatsCard
+                title='Avg Opponent MMR'
+                value={Math.round(avgOpponentMmr)}
+                icon={<UserIcon className='h-5 w-5 ' />}
+                description={''}
+                accentColor='text-zink-800 dark:text-zink-200'
+              />
             </div>
           </div>
         </div>
