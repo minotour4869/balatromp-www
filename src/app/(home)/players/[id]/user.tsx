@@ -159,7 +159,7 @@ export function UserInfo() {
 
   const avgOpponentMmr =
     games
-      .filter((g) => g.result !== 'tie')
+      .filter((g) => g.result !== 'tie' && g.gameType === 'ranked')
       .reduce((acc, g) => acc + g.opponentMmr, 0) / meaningful_games
   return (
     <div className='flex flex-1 flex-col overflow-hidden'>
