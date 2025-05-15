@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         console.log({ playerIds })
         await syncHistory()
         await Promise.allSettled(
-          [RANKED_CHANNEL, VANILLA_CHANNEL].map((id) =>
+          [RANKED_CHANNEL].map((id) =>
             leaderboardService.refreshLeaderboard(id)
           )
         )
