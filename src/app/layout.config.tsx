@@ -1,5 +1,6 @@
+import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
-import { BookOpen, CircleDollarSign, Info, Trophy, Upload } from 'lucide-react'
+import { BookOpen, CircleDollarSign, Trophy, Upload } from 'lucide-react'
 import { Header } from './_components/header'
 
 const links = [
@@ -14,30 +15,37 @@ const links = [
     icon: <Trophy />,
   },
   {
-    text: 'About',
-    url: '/about',
-    icon: <Info />,
-  },
-  {
     text: 'Major League Balatro',
     url: '/major-league-balatro',
   },
   {
-    text: 'Support Mod Development',
-    url: 'https://ko-fi.com/virtualized/shop',
+    text: 'Support Us',
+    url: '/support-us',
     icon: <CircleDollarSign />,
   },
   {
-    text: 'Fix Corrupted Profile',
-    url: '/profile-fix',
-    icon: <Upload />,
+    text: 'Tools',
+    type: 'menu',
+    items: [
+      {
+        text: 'Fix Corrupted Profile',
+        url: '/profile-fix',
+        icon: <Upload />,
+      },
+      {
+        text: 'Log Parser',
+        url: '/log-parser',
+        icon: <Upload />,
+      },
+    ],
   },
+
   // {
   //   text: 'Credits',
   //   url: '/credits',
   //   icon: <Award />,
   // },
-]
+] satisfies LinkItemType[]
 const nav = {
   title: (
     <div className='flex items-center space-x-2'>

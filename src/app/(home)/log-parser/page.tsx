@@ -571,7 +571,7 @@ export default function LogParser() {
               <DropzoneGroup>
                 <DropzoneTitle>Drop log file here or click</DropzoneTitle>
                 <DropzoneDescription>
-                  Upload your Balatro <strong>log.txt</strong> file.
+                  Upload your logs file.
                 </DropzoneDescription>
               </DropzoneGroup>
             </DropzoneGroup>
