@@ -762,10 +762,13 @@ export default function LogParser() {
                               {game.logOwnerFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.logOwnerFinalJokers.map((joker, i) => {
-                                    joker = joker.split('-')[0] // Remove any suffix after the key
+                                    const jokerName = joker.split('-')[0] // Remove any suffix after the key
+                                    if (!jokerName) {
+                                      return null
+                                    }
                                     const cleanName =
-                                      jokers[joker]?.name ??
-                                      cleanJokerKey(joker)
+                                      jokers[jokerName]?.name ??
+                                      cleanJokerKey(jokerName)
                                     return (
                                       // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
                                       <li key={i} className={'list-none'}>
@@ -775,7 +778,7 @@ export default function LogParser() {
                                           }
                                         >
                                           <OptimizedImage
-                                            src={`/cards/${joker}.png`}
+                                            src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
                                           />
                                           <span>{cleanName}</span>
@@ -795,10 +798,13 @@ export default function LogParser() {
                               {game.opponentFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.opponentFinalJokers.map((joker, i) => {
-                                    joker = joker.split('-')[0] // Remove any suffix after the key
+                                    const jokerName = joker.split('-')[0] // Remove any suffix after the key
+                                    if (!jokerName) {
+                                      return null
+                                    }
                                     const cleanName =
-                                      jokers[joker]?.name ??
-                                      cleanJokerKey(joker)
+                                      jokers[jokerName]?.name ??
+                                      cleanJokerKey(jokerName)
                                     return (
                                       // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
                                       <li key={i} className={'list-none'}>
@@ -808,7 +814,7 @@ export default function LogParser() {
                                           }
                                         >
                                           <OptimizedImage
-                                            src={`/cards/${joker}.png`}
+                                            src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
                                           />
                                           <span>{cleanName}</span>
