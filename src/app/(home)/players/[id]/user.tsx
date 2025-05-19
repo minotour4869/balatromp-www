@@ -121,7 +121,7 @@ export function UserInfo() {
       wins++
     } else if (game.result === 'loss') {
       losses++
-    } else if (game.result === 'tie') {
+    } else if (game.result === 'tie' || game.result === 'unknown') {
       ties++
     } else {
       ties++
@@ -156,10 +156,15 @@ export function UserInfo() {
   const lastVanillaGame = games
     .filter((game) => game.gameType.toLowerCase() === 'vanilla')
     .at(0)
-
+  console.log(games)
   const avgOpponentMmr =
     games
-      .filter((g) => g.result !== 'tie' && g.gameType === 'ranked')
+      .filter(
+        (g) =>
+          g.result !== 'tie' &&
+          g.result !== 'unknown' &&
+          g.gameType === 'ranked'
+      )
       .reduce((acc, g) => acc + g.opponentMmr, 0) / meaningful_games
   return (
     <div className='flex flex-1 flex-col overflow-hidden'>
