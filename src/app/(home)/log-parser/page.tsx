@@ -42,6 +42,7 @@ type LogEvent = {
   timestamp: Date
   text: string
   type: 'event' | 'status' | 'system' | 'shop' | 'action' | 'error' | 'info'
+  img?: string
 }
 
 // Define the structure for game options parsed from lobbyOptions
@@ -454,8 +455,10 @@ export default function LogParser() {
             const cardRaw = cardMatch?.[1]?.trim() ?? 'Unknown Card'
             const cardClean = cardRaw.replace(/^(c_mp_|j_mp_)/, '')
             const cost = costMatch?.[1] ? Number.parseInt(costMatch[1], 10) : 0
+            console.log(cardRaw)
             currentGame.events.push({
               timestamp,
+              img: jokers[cardRaw]?.file,
               text: `Bought ${cardClean}${cost > 0 ? ` for $${cost}` : ''}`,
               type: 'shop',
             })
@@ -713,20 +716,30 @@ export default function LogParser() {
                           <CardContent>
                             <ScrollArea className='h-[90vh]'>
                               <div className='space-y-2 pr-4'>
-                                {game.events.map((event, index) => (
-                                  <div
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: Simple list rendering
-                                    key={index}
-                                    className={`text-base ${getEventColor(event.type)}`}
-                                  >
-                                    <span className='mr-2 font-mono'>
-                                      {formatter.dateTime(event.timestamp, {
-                                        timeStyle: 'medium',
-                                      })}
-                                    </span>
-                                    <span>{event.text}</span>
-                                  </div>
-                                ))}
+                                {game.events.map((event, index) => {
+                                  console.log(event.img)
+                                  return (
+                                    <>
+                                      <div
+                                        // biome-ignore lint/suspicious/noArrayIndexKey: Simple list rendering
+                                        key={index}
+                                        className={`text-base ${getEventColor(event.type)}`}
+                                      >
+                                        <span className='mr-2 font-mono'>
+                                          {formatter.dateTime(event.timestamp, {
+                                            timeStyle: 'medium',
+                                          })}
+                                        </span>
+                                        <span>{event.text}</span>
+                                      </div>
+                                      {event.img && (
+                                        <div>
+                                          <OptimizedImage src={event.img} />
+                                        </div>
+                                      )}
+                                    </>
+                                  )
+                                })}
                               </div>
                             </ScrollArea>
                           </CardContent>
