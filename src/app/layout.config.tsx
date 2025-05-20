@@ -1,6 +1,6 @@
 import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
-import { BookOpen, CircleDollarSign, Trophy, Upload } from 'lucide-react'
+import { BarChart3, BookOpen, CircleDollarSign, Trophy, Upload } from 'lucide-react'
 import { Header } from './_components/header'
 
 const links = [
@@ -36,6 +36,11 @@ const links = [
         text: 'Log Parser',
         url: '/log-parser',
         icon: <Upload />,
+      },
+      {
+        text: 'Games Per Hour',
+        url: '/games-per-hour',
+        icon: <BarChart3 />,
       },
     ],
   },
