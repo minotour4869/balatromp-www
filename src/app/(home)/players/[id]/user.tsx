@@ -17,6 +17,7 @@ import { useState } from 'react'
 
 import { GamesTable } from '@/app/(home)/players/[id]/_components/games-table'
 import { MmrTrendChart } from '@/app/(home)/players/[id]/_components/mmr-trend-chart'
+import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate-trend-chart'
 import { OpponentsTable } from '@/app/(home)/players/[id]/_components/opponents-table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -382,6 +383,7 @@ export function UserInfo() {
               <TabsTrigger value='matches'>Match History</TabsTrigger>
               <TabsTrigger value='opponents'>Opponents</TabsTrigger>
               <TabsTrigger value='mmr-trends'>MMR Trends</TabsTrigger>
+              <TabsTrigger value='winrate-trends'>Winrate Trends</TabsTrigger>
               <TabsTrigger value='stats'>Statistics</TabsTrigger>
               <TabsTrigger value='achievements'>Achievements</TabsTrigger>
             </TabsList>
@@ -440,6 +442,13 @@ export function UserInfo() {
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
                 <MmrTrendChart games={games} />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value='winrate-trends' className='m-0'>
+            <div className='overflow-hidden rounded-lg border'>
+              <div className='overflow-x-auto'>
+                <WinrateTrendChart games={games} />
               </div>
             </div>
           </TabsContent>
