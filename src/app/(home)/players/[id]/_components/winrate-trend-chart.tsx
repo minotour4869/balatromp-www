@@ -29,9 +29,9 @@ export function WinrateTrendChart({ games }: { games: SelectGames[] }) {
   const [gamesWindow, setGamesWindow] = useState(30)
 
   // Sort games by date (oldest to newest)
-  const sortedGames = [...games].sort(
-    (a, b) => a.gameTime.getTime() - b.gameTime.getTime()
-  )
+  const sortedGames = [...games]
+    .sort((a, b) => a.gameTime.getTime() - b.gameTime.getTime())
+    .filter((game) => game.result === 'win' || game.result === 'loss')
 
   // Calculate rolling winrate
   const chartData = calculateRollingWinrate(sortedGames, gamesWindow)
