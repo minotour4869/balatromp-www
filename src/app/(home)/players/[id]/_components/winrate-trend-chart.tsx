@@ -51,7 +51,7 @@ export function WinrateTrendChart({ games }: { games: SelectGames[] }) {
           </div>
           <Slider
             value={[gamesWindow]}
-            onValueChange={(value) => setGamesWindow(value[0])}
+            onValueChange={(value) => setGamesWindow(value[0] ?? 0)}
             min={5}
             max={Math.min(100, games.length)}
             step={1}
