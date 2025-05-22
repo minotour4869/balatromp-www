@@ -376,6 +376,15 @@ export default function LogParser() {
           }
           continue
         }
+        if (
+          line.includes('Client got soldJoker message:  (action: soldJoker)')
+        ) {
+          currentGame.events.push({
+            timestamp,
+            text: 'Opponent sold a joker',
+            type: 'shop',
+          })
+        }
         // This message indicates opponent's spending report
         if (line.includes(' Client got spentLastShop message')) {
           const match = line.match(/amount: (\d+)/)
