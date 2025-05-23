@@ -1,4 +1,5 @@
 import { GithubLinks } from '@/app/_components/github-links'
+import { OptimizedImage } from '@/components/optimized-image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -44,13 +45,12 @@ export default function Home() {
               </Button>
             </div>
             <div className='mt-8 w-full max-w-5xl rounded-lg border bg-card p-4 shadow-xl'>
-              <Image
+              <OptimizedImage
                 src='/multiplayer-screenshot.jpeg'
                 width={1200}
                 height={600}
                 alt='Balatro Multiplayer Screenshot'
                 className='rounded-md'
-                priority
               />
             </div>
           </div>
@@ -339,7 +339,7 @@ export default function Home() {
                 </div>
               </div>
               <div className='flex items-center justify-center'>
-                <Image
+                <OptimizedImage
                   src='/multiplayer-screenshot.jpeg'
                   width={500}
                   height={500}
