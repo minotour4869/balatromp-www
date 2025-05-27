@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/tooltip'
 import { jokers } from '@/shared/jokers'
 import { useFormatter } from 'next-intl'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 
 // Define the structure for individual log events within a game
 type LogEvent = {
@@ -85,6 +85,7 @@ type Game = {
   opponentFinalJokers: string[] // Opponent's final jokers
   events: LogEvent[]
   rerolls: number
+  winner: 'logOwner' | 'opponent' | null // Who won the game
 }
 
 // Helper to initialize a new game object
@@ -114,6 +115,7 @@ const initGame = (id: number, startDate: Date): Game => ({
   opponentFinalJokers: [],
   events: [],
   rerolls: 0,
+  winner: null,
 })
 
 // Helper to format duration
@@ -431,6 +433,27 @@ export default function LogParser() {
           continue
         }
 
+        // Detect win/lose game messages
+        if (line.includes('Client got winGame message:  (action: winGame)')) {
+          currentGame.winner = 'logOwner'
+          currentGame.events.push({
+            timestamp,
+            text: 'You won the game!',
+            type: 'system',
+          })
+          continue
+        }
+
+        if (line.includes('Client got loseGame message:  (action: loseGame)')) {
+          currentGame.winner = 'opponent'
+          currentGame.events.push({
+            timestamp,
+            text: 'You lost the game.',
+            type: 'system',
+          })
+          continue
+        }
+
         // --- Log Owner Actions/Events (Client sent ...) ---
         if (lineLower.includes('client sent')) {
           // Log owner gained/spent money directly
@@ -607,10 +630,10 @@ export default function LogParser() {
 
                 return (
                   <TabsTrigger
-                    key={game.id}
+                    key={`${game.id}-trigger`}
                     value={`game-${game.id}-${game.logOwnerName || 'LogOwner'}-vs-${game.opponentName || 'Opponent'}`}
                   >
-                    Game {game.id} vs {opponentLabel}
+                    Game {game.id} vs {game.winner === 'opponent' ? `${opponentLabel} 🏆` : opponentLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}
                   </TabsTrigger>
                 )
               })}
@@ -631,7 +654,7 @@ export default function LogParser() {
 
               return (
                 <TabsContent
-                  key={game.id}
+                  key={`${game.id}-content`}
                   value={`game-${game.id}-${game.logOwnerName || 'LogOwner'}-vs-${game.opponentName || 'Opponent'}`}
                   className='mt-4'
                 >
@@ -675,6 +698,15 @@ export default function LogParser() {
                                   ? 'Host'
                                   : 'Guest'}{' '}
                               ({ownerLabel})
+                            </p>
+                            {/* Show Winner */}
+                            <p>
+                              <strong>Winner:</strong>{' '}
+                              {game.winner === null
+                                ? 'Unknown'
+                                : game.winner === 'logOwner'
+                                  ? ownerLabel
+                                  : opponentLabel}
                             </p>
                             <p>
                               <strong>Rerolls:</strong>{' '}
@@ -728,7 +760,8 @@ export default function LogParser() {
                                 {game.events.map((event, index) => {
                                   console.log(event.img)
                                   return (
-                                    <>
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: simple list
+                                    <Fragment key={index}>
                                       <div
                                         // biome-ignore lint/suspicious/noArrayIndexKey: Simple list rendering
                                         key={index}
@@ -746,7 +779,7 @@ export default function LogParser() {
                                           <OptimizedImage src={event.img} />
                                         </div>
                                       )}
-                                    </>
+                                    </Fragment>
                                   )
                                 })}
                               </div>
@@ -780,7 +813,7 @@ export default function LogParser() {
                           </CardHeader>
                           <CardContent className='space-y-3 text-sm'>
                             <div>
-                              <strong>{ownerLabel}:</strong>
+                              <strong>{ownerLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}:</strong>
                               {game.logOwnerFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.logOwnerFinalJokers.map((joker, i) => {
@@ -816,7 +849,7 @@ export default function LogParser() {
                               )}
                             </div>
                             <div>
-                              <strong>{opponentLabel}:</strong>
+                              <strong>{opponentLabel}{game.winner === 'opponent' ? ' 🏆' : ''}:</strong>
                               {game.opponentFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.opponentFinalJokers.map((joker, i) => {
@@ -866,7 +899,7 @@ export default function LogParser() {
                                 <ul className='ml-4 list-inside list-disc font-mono text-base'>
                                   {game.hostMods.map((mod, i) => (
                                     // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
-                                    <li key={i}>{mod}</li>
+                                    <li key={`host-mod-${i}`}>{mod}</li>
                                   ))}
                                 </ul>
                               ) : (
@@ -883,7 +916,7 @@ export default function LogParser() {
                                 <ul className='ml-4 list-inside list-disc font-mono text-base'>
                                   {game.guestMods.map((mod, i) => (
                                     // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
-                                    <li key={i}>{mod}</li>
+                                    <li key={`guest-mod-${i}`}>{mod}</li>
                                   ))}
                                 </ul>
                               ) : (
@@ -940,9 +973,11 @@ function ShopSpendingTable({
       <TableHeader>
         <TableRow>
           <TableHead className='w-[60px] text-right font-mono'>Shop</TableHead>
-          <TableHead className='text-right font-mono'>{ownerLabel}</TableHead>
           <TableHead className='text-right font-mono'>
-            {opponentLabel}
+            {ownerLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}
+          </TableHead>
+          <TableHead className='text-right font-mono'>
+            {opponentLabel}{game.winner === 'opponent' ? ' 🏆' : ''}
           </TableHead>
         </TableRow>
       </TableHeader>
