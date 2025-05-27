@@ -36,6 +36,7 @@ import {
 import { jokers } from '@/shared/jokers'
 import { useFormatter } from 'next-intl'
 import { Fragment, useState } from 'react'
+import { type PvpBlind, PvpBlindsCard } from './_components/pvp-blinds'
 
 // Define the structure for individual log events within a game
 type LogEvent = {
@@ -44,6 +45,8 @@ type LogEvent = {
   type: 'event' | 'status' | 'system' | 'shop' | 'action' | 'error' | 'info'
   img?: string
 }
+
+// PVP blind types (PvpBlind and HandScore) are now imported from the PvpBlindsCard component
 
 // Define the structure for game options parsed from lobbyOptions
 type GameOptions = {
@@ -86,6 +89,8 @@ type Game = {
   events: LogEvent[]
   rerolls: number
   winner: 'logOwner' | 'opponent' | null // Who won the game
+  pvpBlinds: PvpBlind[] // PVP blind data
+  currentPvpBlind: number | null // Current PVP blind number
 }
 
 // Helper to initialize a new game object
@@ -116,6 +121,8 @@ const initGame = (id: number, startDate: Date): Game => ({
   events: [],
   rerolls: 0,
   winner: null,
+  pvpBlinds: [],
+  currentPvpBlind: null,
 })
 
 // Helper to format duration
@@ -268,27 +275,6 @@ export default function LogParser() {
             text: `Game ${gameCounter} Started`,
             type: 'system',
           })
-          currentGame.events.push({
-            timestamp,
-            text: `Host: ${currentGame.host || 'Unknown'}, Guest: ${currentGame.guest || 'Unknown'}`,
-            type: 'info',
-          })
-          // Add event indicating log owner's role
-          currentGame.events.push({
-            timestamp,
-            text: `Log Owner Role: ${currentGame.isHost === null ? 'Unknown' : currentGame.isHost ? 'Host' : 'Guest'} (${currentGame.logOwnerName || 'Unknown'})`,
-            type: 'info',
-          })
-          currentGame.events.push({
-            timestamp,
-            text: `Deck: ${currentGame.deck || 'Unknown'}`,
-            type: 'info',
-          })
-          currentGame.events.push({
-            timestamp,
-            text: `Seed: ${currentGame.seed || 'Unknown'}`,
-            type: 'info',
-          })
           continue
         }
 
@@ -364,6 +350,52 @@ export default function LogParser() {
               currentGame.opponentLastSkips = newSkips
             }
           }
+
+          // Parse opponent score for PVP blind
+          if (currentGame.currentPvpBlind !== null) {
+            const scoreMatch = line.match(/score: *(\d+)/)
+            const handsLeftMatch = line.match(/handsLeft: *(\d+)/)
+
+            if (scoreMatch?.[1]) {
+              const score = Number.parseInt(scoreMatch[1], 10)
+              const handsLeft = handsLeftMatch?.[1]
+                ? Number.parseInt(handsLeftMatch[1], 10)
+                : 0
+
+              if (!Number.isNaN(score)) {
+                const currentBlindIndex = currentGame.currentPvpBlind - 1
+                if (
+                  currentBlindIndex >= 0 &&
+                  currentBlindIndex < currentGame.pvpBlinds.length
+                ) {
+                  const currentBlind = currentGame.pvpBlinds[currentBlindIndex]
+                  if (!currentBlind) {
+                    continue
+                  }
+                  // Update opponent score in current blind
+                  currentBlind.opponentScore += score
+
+                  // Add hand score
+                  currentBlind.handScores.push({
+                    timestamp,
+                    score,
+                    handsLeft,
+                    isLogOwner: false,
+                  })
+
+                  // Add event for opponent score only if score > 0
+                  if (score > 0) {
+                    currentGame.events.push({
+                      timestamp,
+                      text: `Opponent score: ${score} (Hands left: ${handsLeft})`,
+                      type: 'event',
+                    })
+                  }
+                }
+              }
+            }
+          }
+
           continue
         }
         if (line.includes('Client sent message: action:soldCard')) {
@@ -454,6 +486,43 @@ export default function LogParser() {
           continue
         }
 
+        // Parse endPvP messages to determine the winner of each blind
+        if (line.includes('Client got endPvP message')) {
+          if (currentGame.currentPvpBlind !== null) {
+            const lostMatch = line.match(/lost: (true|false)/)
+            if (lostMatch?.[1]) {
+              const lost = lostMatch[1].toLowerCase() === 'true'
+              const currentBlindIndex = currentGame.currentPvpBlind - 1
+
+              if (
+                currentBlindIndex >= 0 &&
+                currentBlindIndex < currentGame.pvpBlinds.length
+              ) {
+                const currentBlind = currentGame.pvpBlinds[currentBlindIndex]
+                if (!currentBlind) {
+                  continue
+                }
+                // Set the winner
+                currentBlind.winner = lost ? 'opponent' : 'logOwner'
+
+                // Set the end timestamp
+                currentBlind.endTimestamp = timestamp
+
+                // Add event for blind end
+                currentGame.events.push({
+                  timestamp,
+                  text: `Ended Blind #${currentBlind.blindNumber} - ${lost ? 'You lost' : 'You won'} (Your score: ${currentBlind.logOwnerScore}, Opponent score: ${currentBlind.opponentScore})`,
+                  type: 'event',
+                })
+
+                // Reset current blind
+                currentGame.currentPvpBlind = null
+              }
+            }
+          }
+          continue
+        }
+
         // --- Log Owner Actions/Events (Client sent ...) ---
         if (lineLower.includes('client sent')) {
           // Log owner gained/spent money directly
@@ -487,7 +556,6 @@ export default function LogParser() {
             const cardRaw = cardMatch?.[1]?.trim() ?? 'Unknown Card'
             const cardClean = cardRaw.replace(/^(c_mp_|j_mp_)/, '')
             const cost = costMatch?.[1] ? Number.parseInt(costMatch[1], 10) : 0
-            console.log(cardRaw)
             currentGame.events.push({
               timestamp,
               img: jokers[cardRaw]?.file,
@@ -527,6 +595,52 @@ export default function LogParser() {
                 type: 'action',
               })
             }
+          } else if (lineLower.includes('playhand')) {
+            // Log owner played a hand
+            if (currentGame.currentPvpBlind !== null) {
+              const scoreMatch = line.match(/score:(\d+)/)
+              const handsLeftMatch = line.match(/handsLeft:(\d+)/)
+
+              if (scoreMatch?.[1]) {
+                const score = Number.parseInt(scoreMatch[1], 10)
+                const handsLeft = handsLeftMatch?.[1]
+                  ? Number.parseInt(handsLeftMatch[1], 10)
+                  : 0
+
+                if (!Number.isNaN(score)) {
+                  const currentBlindIndex = currentGame.currentPvpBlind - 1
+                  if (
+                    currentBlindIndex >= 0 &&
+                    currentBlindIndex < currentGame.pvpBlinds.length
+                  ) {
+                    const currentBlind =
+                      currentGame.pvpBlinds[currentBlindIndex]
+                    if (!currentBlind) {
+                      continue
+                    }
+                    // Update log owner score in current blind
+                    currentBlind.logOwnerScore += score
+
+                    // Add hand score
+                    currentBlind.handScores.push({
+                      timestamp,
+                      score,
+                      handsLeft,
+                      isLogOwner: true,
+                    })
+
+                    // Add event for log owner score only if score > 0
+                    if (score > 0) {
+                      currentGame.events.push({
+                        timestamp,
+                        text: `Your score: ${score} (Hands left: ${handsLeft})`,
+                        type: 'event',
+                      })
+                    }
+                  }
+                }
+              }
+            }
           } else if (lineLower.includes('setlocation')) {
             // Log owner changed location
             const locMatch = line.match(/location:([a-zA-Z0-9_-]+)/)
@@ -538,6 +652,35 @@ export default function LogParser() {
                   text: `Moved to ${formatLocation(locCode)}`,
                   type: 'status',
                 })
+
+                // Check if this is a blind location
+                if (locCode.startsWith('loc_playing-bl_')) {
+                  // Extract blind name
+                  const blindName = locCode.slice('loc_playing-bl_'.length)
+
+                  // Increment blind counter
+                  const blindNumber = currentGame.pvpBlinds.length + 1
+
+                  // Create a new PVP blind
+                  currentGame.pvpBlinds.push({
+                    blindNumber,
+                    startTimestamp: timestamp,
+                    logOwnerScore: 0,
+                    opponentScore: 0,
+                    handScores: [],
+                    winner: null,
+                  })
+
+                  // Set as current blind
+                  currentGame.currentPvpBlind = blindNumber
+
+                  // Add event for blind start
+                  currentGame.events.push({
+                    timestamp,
+                    text: `Started ${formatLocation(locCode)} (Blind #${blindNumber})`,
+                    type: 'event',
+                  })
+                }
               }
             }
           }
@@ -633,7 +776,11 @@ export default function LogParser() {
                     key={`${game.id}-trigger`}
                     value={`game-${game.id}-${game.logOwnerName || 'LogOwner'}-vs-${game.opponentName || 'Opponent'}`}
                   >
-                    Game {game.id} vs {game.winner === 'opponent' ? `${opponentLabel} 🏆` : opponentLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}
+                    Game {game.id} vs{' '}
+                    {game.winner === 'opponent'
+                      ? `${opponentLabel} 🏆`
+                      : opponentLabel}
+                    {game.winner === 'logOwner' ? ' 🏆' : ''}
                   </TabsTrigger>
                 )
               })}
@@ -758,7 +905,6 @@ export default function LogParser() {
                             <ScrollArea className='h-[90vh]'>
                               <div className='space-y-2 pr-4'>
                                 {game.events.map((event, index) => {
-                                  console.log(event.img)
                                   return (
                                     // biome-ignore lint/suspicious/noArrayIndexKey: simple list
                                     <Fragment key={index}>
@@ -766,12 +912,14 @@ export default function LogParser() {
                                         // biome-ignore lint/suspicious/noArrayIndexKey: Simple list rendering
                                         key={index}
                                         className={`text-base ${getEventColor(event.type)} ${
-                                          event.text.includes('Opponent') 
-                                            ? 'flex flex-row-reverse text-right' 
+                                          event.text.includes('Opponent')
+                                            ? 'flex flex-row-reverse text-right'
                                             : 'flex'
                                         }`}
                                       >
-                                        <span className={`${event.text.includes('Opponent') ? 'ml-2' : 'mr-2'} font-mono`}>
+                                        <span
+                                          className={`${event.text.includes('Opponent') ? 'ml-2' : 'mr-2'} font-mono`}
+                                        >
                                           {formatter.dateTime(event.timestamp, {
                                             timeStyle: 'medium',
                                           })}
@@ -779,7 +927,9 @@ export default function LogParser() {
                                         <span>{event.text}</span>
                                       </div>
                                       {event.img && (
-                                        <div className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}>
+                                        <div
+                                          className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}
+                                        >
                                           <OptimizedImage src={event.img} />
                                         </div>
                                       )}
@@ -809,6 +959,14 @@ export default function LogParser() {
                             />
                           </CardContent>
                         </Card>
+                        {/* PVP Blinds Card */}
+                        <PvpBlindsCard
+                          game={game}
+                          ownerLabel={ownerLabel}
+                          opponentLabel={opponentLabel}
+                          formatter={formatter}
+                        />
+
                         <Card>
                           <CardHeader>
                             <CardTitle className='text-lg'>
@@ -817,7 +975,10 @@ export default function LogParser() {
                           </CardHeader>
                           <CardContent className='space-y-3 text-sm'>
                             <div>
-                              <strong>{ownerLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}:</strong>
+                              <strong>
+                                {ownerLabel}
+                                {game.winner === 'logOwner' ? ' 🏆' : ''}:
+                              </strong>
                               {game.logOwnerFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.logOwnerFinalJokers.map((joker, i) => {
@@ -853,7 +1014,10 @@ export default function LogParser() {
                               )}
                             </div>
                             <div>
-                              <strong>{opponentLabel}{game.winner === 'opponent' ? ' 🏆' : ''}:</strong>
+                              <strong>
+                                {opponentLabel}
+                                {game.winner === 'opponent' ? ' 🏆' : ''}:
+                              </strong>
                               {game.opponentFinalJokers.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.opponentFinalJokers.map((joker, i) => {
@@ -978,10 +1142,12 @@ function ShopSpendingTable({
         <TableRow>
           <TableHead className='w-[60px] text-right font-mono'>Shop</TableHead>
           <TableHead className='text-right font-mono'>
-            {ownerLabel}{game.winner === 'logOwner' ? ' 🏆' : ''}
+            {ownerLabel}
+            {game.winner === 'logOwner' ? ' 🏆' : ''}
           </TableHead>
           <TableHead className='text-right font-mono'>
-            {opponentLabel}{game.winner === 'opponent' ? ' 🏆' : ''}
+            {opponentLabel}
+            {game.winner === 'opponent' ? ' 🏆' : ''}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -1053,6 +1219,8 @@ function ShopSpendingTable({
   )
 }
 
+// PVP blinds components are now imported from the PvpBlindsCard component
+
 // Helper to parse lobby options string (no changes needed)
 function parseLobbyOptions(optionsStr: string): GameOptions {
   const options: GameOptions = {}
@@ -1092,10 +1260,15 @@ function parseLobbyOptions(optionsStr: string): GameOptions {
   return options
 }
 
+// formatNumber function moved to PvpBlindsCard component
+
 // Helper to format location codes (no changes needed)
 function formatLocation(locCode: string): string {
   if (locCode === 'loc_shop') {
     return 'Shop'
+  }
+  if (locCode === 'loc_playing-bl_mp_nemesis') {
+    return 'PvP Blind'
   }
   if (locCode.startsWith('loc_playing-')) {
     const subcode = locCode.slice('loc_playing-'.length)
