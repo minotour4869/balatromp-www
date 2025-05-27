@@ -765,9 +765,13 @@ export default function LogParser() {
                                       <div
                                         // biome-ignore lint/suspicious/noArrayIndexKey: Simple list rendering
                                         key={index}
-                                        className={`text-base ${getEventColor(event.type)}`}
+                                        className={`text-base ${getEventColor(event.type)} ${
+                                          event.text.includes('Opponent') 
+                                            ? 'flex flex-row-reverse text-right' 
+                                            : 'flex'
+                                        }`}
                                       >
-                                        <span className='mr-2 font-mono'>
+                                        <span className={`${event.text.includes('Opponent') ? 'ml-2' : 'mr-2'} font-mono`}>
                                           {formatter.dateTime(event.timestamp, {
                                             timeStyle: 'medium',
                                           })}
@@ -775,7 +779,7 @@ export default function LogParser() {
                                         <span>{event.text}</span>
                                       </div>
                                       {event.img && (
-                                        <div>
+                                        <div className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}>
                                           <OptimizedImage src={event.img} />
                                         </div>
                                       )}
