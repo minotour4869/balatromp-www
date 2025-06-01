@@ -16,6 +16,7 @@ import type React from 'react'
 import { useState } from 'react'
 
 import { GamesTable } from '@/app/(home)/players/[id]/_components/games-table'
+import { TimeZoneProvider } from '@/components/timezone-provider'
 import { MmrTrendChart } from '@/app/(home)/players/[id]/_components/mmr-trend-chart'
 import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate-trend-chart'
 import { OpponentsTable } from '@/app/(home)/players/[id]/_components/opponents-table'
@@ -427,7 +428,9 @@ export function UserInfo() {
           <TabsContent value='matches' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <GamesTable games={filteredGames} />
+                <TimeZoneProvider>
+                  <GamesTable games={filteredGames} />
+                </TimeZoneProvider>
               </div>
             </div>
           </TabsContent>

@@ -27,7 +27,7 @@ import {
   MinusCircle,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useFormatter } from 'next-intl'
+import { useFormatter, useTimeZone } from 'next-intl'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
@@ -60,6 +60,7 @@ function openTranscript(gameNumber: number): void {
 }
 const useColumns = () => {
   const format = useFormatter()
+  const timeZone = useTimeZone()
   const session = useSession()
   const isAdmin = session.data?.user.role === 'admin'
   return useMemo(
@@ -154,6 +155,7 @@ const useColumns = () => {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit',
+              timeZone,
             })}
           </span>
         ),
@@ -170,6 +172,7 @@ const useColumns = () => {
             {format.dateTime(info.getValue(), {
               hour: '2-digit',
               minute: '2-digit',
+              timeZone,
             })}
           </span>
         ),
