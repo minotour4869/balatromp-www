@@ -107,7 +107,6 @@ export function StreamCardClient() {
       }
     }
   }
-  console.log(winsVsOpponent, lossesVsOpponent)
   return (
     <div
       className={'flex items-center justify-between gap-2 font-m6x11'}

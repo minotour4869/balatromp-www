@@ -16,10 +16,10 @@ import type React from 'react'
 import { useState } from 'react'
 
 import { GamesTable } from '@/app/(home)/players/[id]/_components/games-table'
-import { TimeZoneProvider } from '@/components/timezone-provider'
 import { MmrTrendChart } from '@/app/(home)/players/[id]/_components/mmr-trend-chart'
-import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate-trend-chart'
 import { OpponentsTable } from '@/app/(home)/players/[id]/_components/opponents-table'
+import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate-trend-chart'
+import { TimeZoneProvider } from '@/components/timezone-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -158,7 +158,6 @@ export function UserInfo() {
   const lastVanillaGame = games
     .filter((game) => game.gameType.toLowerCase() === 'vanilla')
     .at(0)
-  console.log(games)
   const avgOpponentMmr =
     games
       .filter(

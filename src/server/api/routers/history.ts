@@ -22,9 +22,11 @@ export const history_router = createTRPCRouter({
     }),
   games_per_hour: publicProcedure
     .input(
-      z.object({
-        groupBy: z.enum(['hour', 'day', 'week', 'month']).default('hour'),
-      }).optional()
+      z
+        .object({
+          groupBy: z.enum(['hour', 'day', 'week', 'month']).default('hour'),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
       const groupBy = input?.groupBy || 'hour'
@@ -42,45 +44,48 @@ export const history_router = createTRPCRouter({
       const processedGameNums = new Set<number>()
 
       // Group games by the selected time unit
-      const gamesByTimeUnit = games.reduce<Record<string, number>>((acc, game) => {
-        if (!game.gameTime || !game.gameNum) return acc
+      const gamesByTimeUnit = games.reduce<Record<string, number>>(
+        (acc, game) => {
+          if (!game.gameTime || !game.gameNum) return acc
 
-        // Skip if we've already processed this game number
-        if (processedGameNums.has(game.gameNum)) return acc
+          // Skip if we've already processed this game number
+          if (processedGameNums.has(game.gameNum)) return acc
 
-        // Mark this game as processed
-        processedGameNums.add(game.gameNum)
+          // Mark this game as processed
+          processedGameNums.add(game.gameNum)
 
-        const date = new Date(game.gameTime)
-        let timeKey: string
+          const date = new Date(game.gameTime)
+          let timeKey: string
 
-        switch (groupBy) {
-          case 'hour':
-            // Format: YYYY-MM-DD HH:00
-            timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`
-            break
-          case 'day':
-            // Format: YYYY-MM-DD
-            timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-            break
-          case 'week':
-            // Get the first day of the week (Sunday)
-            const firstDayOfWeek = new Date(date)
-            const day = date.getDay() // 0 = Sunday, 1 = Monday, etc.
-            firstDayOfWeek.setDate(date.getDate() - day)
-            timeKey = `Week of ${firstDayOfWeek.getFullYear()}-${String(firstDayOfWeek.getMonth() + 1).padStart(2, '0')}-${String(firstDayOfWeek.getDate()).padStart(2, '0')}`
-            break
-          case 'month':
-            // Format: YYYY-MM
-            timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-            break
-          default:
-            timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`
-        }
+          switch (groupBy) {
+            case 'hour':
+              // Format: YYYY-MM-DD HH:00
+              timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`
+              break
+            case 'day':
+              // Format: YYYY-MM-DD
+              timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+              break
+            case 'week':
+              // Get the first day of the week (Sunday)
+              const firstDayOfWeek = new Date(date)
+              const day = date.getDay() // 0 = Sunday, 1 = Monday, etc.
+              firstDayOfWeek.setDate(date.getDate() - day)
+              timeKey = `Week of ${firstDayOfWeek.getFullYear()}-${String(firstDayOfWeek.getMonth() + 1).padStart(2, '0')}-${String(firstDayOfWeek.getDate()).padStart(2, '0')}`
+              break
+            case 'month':
+              // Format: YYYY-MM
+              timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+              break
+            default:
+              timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`
+          }
 
-        acc[timeKey] = (acc[timeKey] || 0) + 1
-        return acc
-      }, {})
+          acc[timeKey] = (acc[timeKey] || 0) + 1
+          return acc
+        },
+        {}
+      )
 
       // Convert to array format for chart
       return Object.entries(gamesByTimeUnit).map(([timeUnit, count]) => ({
@@ -155,12 +160,10 @@ function processGameEntry(gameId: number, game_num: number, entry: any) {
     return []
   }
   if (!parsedEntry.teams?.[0]?.[0] || !parsedEntry.teams?.[1]?.[0]) {
-    console.log('skipping game', parsedEntry)
     return []
   }
 
   if (parsedEntry.winner === -2) {
-    console.log('skipping ongoing game', parsedEntry)
     return []
   }
   const player0 = parsedEntry.teams[0][0]
