@@ -1,43 +1,40 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
 
 export const history_router = createTRPCRouter({
-  user_games: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(player_games)
-        .where(eq(player_games.playerId, input.user_id))
-        .orderBy(desc(player_games.gameNum))
-    }),
   games_per_hour: publicProcedure
     .input(
       z
         .object({
           groupBy: z.enum(['hour', 'day', 'week', 'month']).default('hour'),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
         })
         .optional()
     )
     .query(async ({ ctx, input }) => {
       const groupBy = input?.groupBy || 'hour'
-
-      // Fetch all games with their gameNum to identify unique games
+      const startDate = input?.startDate ? new Date(input.startDate) : undefined
+      const endDate = input?.endDate ? new Date(input.endDate) : undefined
+      const nextDay = endDate ? new Date(endDate) : undefined
+      if (nextDay) nextDay.setDate(nextDay.getDate() + 1)
       const games = await ctx.db
         .select({
           gameTime: player_games.gameTime,
           gameNum: player_games.gameNum,
         })
         .from(player_games)
+        .where(
+          and(
+            startDate ? gt(player_games.gameTime, startDate) : undefined,
+            nextDay ? lt(player_games.gameTime, nextDay) : undefined
+          )
+        )
         .orderBy(player_games.gameTime)
 
       // Track unique game numbers to avoid counting the same game twice
@@ -97,6 +94,19 @@ export const history_router = createTRPCRouter({
   sync: publicProcedure.mutation(async () => {
     return syncHistory()
   }),
+  user_games: publicProcedure
+    .input(
+      z.object({
+        user_id: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return await ctx.db
+        .select()
+        .from(player_games)
+        .where(eq(player_games.playerId, input.user_id))
+        .orderBy(desc(player_games.gameNum))
+    }),
 })
 
 export async function syncHistory() {
