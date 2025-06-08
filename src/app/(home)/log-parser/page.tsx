@@ -192,9 +192,8 @@ export default function LogParser() {
             // Extract Opponent Jokers
             const keysMatch = line.match(/\(keys: ([^)]+)\)/)
             if (keysMatch?.[1]) {
-              currentGame.opponentFinalJokers = keysMatch[1]
-                .split(';')
-                .filter(Boolean) // Remove empty strings if any
+              const str = keysMatch?.[1]
+              currentGame.opponentFinalJokers = await parseJokersFromString(str)
             }
             // Extract Seed (often found here)
             const seedMatch = line.match(/seed: ([A-Z0-9]+)/)
@@ -213,9 +212,8 @@ export default function LogParser() {
             // Extract Log Owner Jokers
             const keysMatch = line.match(/keys:(.+)$/) // Match from keys: to end of line
             if (keysMatch?.[1]) {
-              currentGame.logOwnerFinalJokers = keysMatch[1]
-                .split(';')
-                .filter(Boolean) // Remove empty strings if any
+              const str = keysMatch?.[1]
+              currentGame.logOwnerFinalJokers = await parseJokersFromString(str)
             }
           }
           continue
@@ -1410,4 +1408,82 @@ function cleanJokerKey(key: string): string {
       /\w\S*/g, // Capitalize each word (Title Case)
       (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
     )
+}
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue }
+
+function luaTableToJson(luaString: string): string {
+  let str = luaString.replace(/^return\s*/, '')
+
+  // Handle nested tables closing properly
+  str = str.replace(/,(\s*})/g, '$1')
+
+  // Handle array-style table entries [1] = value
+  str = str.replace(/\[(\d+)\]\s*=/g, '"$1":')
+
+  // Handle string keys ["key"] = value
+  str = str.replace(/\[(["'][^"']+["'])\]\s*=/g, '$1:')
+
+  // Handle regular key = value
+  str = str.replace(/(\w+)\s*=/g, '"$1":')
+
+  // Replace single quotes with double quotes
+  str = str.replace(/'/g, '"')
+
+  // Clean up empty tables
+  str = str.replace(/{}/g, '{}')
+
+  // Remove trailing commas inside objects
+  str = str.replace(/,(\s*[}\]])/g, '$1')
+
+  return str
+}
+
+async function decodePackedString(encodedString: string): Promise<JsonValue> {
+  try {
+    // Step 1: Decode base64
+    const binaryString = atob(encodedString)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+
+    // Step 2: Decompress using raw inflate
+    const ds = new DecompressionStream('deflate-raw')
+    const decompressedStream = new Blob([bytes]).stream().pipeThrough(ds)
+    const decompressedBlob = await new Response(decompressedStream).blob()
+    const decompressedString = await decompressedBlob.text()
+
+    // Basic security check
+    if (/[^"'\w_]function[^"'\w_]/.test(decompressedString)) {
+      throw new Error('Function keyword detected')
+    }
+
+    // Convert Lua table to JSON
+    const jsonString = luaTableToJson(decompressedString)
+    const result = JSON.parse(jsonString) as JsonValue
+    return result
+  } catch (error) {
+    console.error('Failed string:', encodedString)
+    console.error('Conversion error:', error)
+    throw error
+  }
+}
+
+async function parseJokersFromString(str: string) {
+  if (str.endsWith('==')) {
+    const decoded = await decodePackedString(str)
+    if (decoded && typeof decoded === 'object' && 'cards' in decoded) {
+      return Object.values(decoded.cards as any).map(
+        (c: any) => c.save_fields.center
+      )
+    }
+  }
+  return str.split(';').filter(Boolean) // Remove empty strings if any
 }
