@@ -1477,7 +1477,7 @@ async function decodePackedString(encodedString: string): Promise<JsonValue> {
 }
 
 async function parseJokersFromString(str: string) {
-  if (str.endsWith('==')) {
+  if (str.startsWith('7z')) {
     const decoded = await decodePackedString(str)
     if (decoded && typeof decoded === 'object' && 'cards' in decoded) {
       return Object.values(decoded.cards as any).map(
