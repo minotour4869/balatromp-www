@@ -22,7 +22,11 @@ export default async function ReleasesPage() {
   return (
     <Suspense>
       <HydrateClient>
-        <div className={'container mx-auto pt-8'}>
+        <div
+          className={
+            'mx-auto flex w-[calc(100%-1rem)] max-w-fd-container flex-col gap-4 pt-16'
+          }
+        >
           <ReleasesClient />
         </div>
       </HydrateClient>

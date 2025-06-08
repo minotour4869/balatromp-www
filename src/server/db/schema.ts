@@ -131,6 +131,8 @@ export const releases = pgTable('mod_release', {
   description: text('description'),
   version: text('version').notNull(),
   url: text('url').notNull(),
+  smods_version: text('smods_version').default('latest'),
+  lovely_version: text('lovely_version').default('latest'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')
     .notNull()
