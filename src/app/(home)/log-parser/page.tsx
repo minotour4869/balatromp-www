@@ -1,5 +1,6 @@
 'use client'
 
+import { LuaToJsonConverter } from '@/app/(home)/log-parser/lua-parser'
 import { OptimizedImage } from '@/components/optimized-image'
 import {
   Card,
@@ -37,7 +38,6 @@ import { jokers } from '@/shared/jokers'
 import { useFormatter } from 'next-intl'
 import { Fragment, useState } from 'react'
 import { type PvpBlind, PvpBlindsCard } from './_components/pvp-blinds'
-
 // Define the structure for individual log events within a game
 type LogEvent = {
   timestamp: Date
@@ -1418,31 +1418,9 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue }
 
-function luaTableToJson(luaString: string): string {
-  let str = luaString.replace(/^return\s*/, '')
-
-  // Handle nested tables closing properly
-  str = str.replace(/,(\s*})/g, '$1')
-
-  // Handle array-style table entries [1] = value
-  str = str.replace(/\[(\d+)\]\s*=/g, '"$1":')
-
-  // Handle string keys ["key"] = value
-  str = str.replace(/\[(["'][^"']+["'])\]\s*=/g, '$1:')
-
-  // Handle regular key = value
-  str = str.replace(/(\w+)\s*=/g, '"$1":')
-
-  // Replace single quotes with double quotes
-  str = str.replace(/'/g, '"')
-
-  // Clean up empty tables
-  str = str.replace(/{}/g, '{}')
-
-  // Remove trailing commas inside objects
-  str = str.replace(/,(\s*[}\]])/g, '$1')
-
-  return str
+async function luaTableToJson(luaString: string): string {
+  const str = luaString.replace(/^return\s*/, '')
+  return LuaToJsonConverter.convert(str)
 }
 
 async function decodePackedString(encodedString: string): Promise<JsonValue> {
@@ -1466,7 +1444,8 @@ async function decodePackedString(encodedString: string): Promise<JsonValue> {
     }
 
     // Convert Lua table to JSON
-    const jsonString = luaTableToJson(decompressedString)
+    const jsonString = await luaTableToJson(decompressedString)
+    console.log(jsonString)
     const result = JSON.parse(jsonString) as JsonValue
     return result
   } catch (error) {
@@ -1479,13 +1458,18 @@ async function decodePackedString(encodedString: string): Promise<JsonValue> {
 async function parseJokersFromString(str: string) {
   // Check if the string starts with 'H4' indicating a packed string
   // This is a common prefix for base64 encoded gzip strings
-  if (str.startsWith('H4')) {
-    const decoded = await decodePackedString(str)
-    if (decoded && typeof decoded === 'object' && 'cards' in decoded) {
-      return Object.values(decoded.cards as any).map(
-        (c: any) => c.save_fields.center
-      )
+  try {
+    if (str.startsWith('H4')) {
+      const decoded = await decodePackedString(str)
+      if (decoded && typeof decoded === 'object' && 'cards' in decoded) {
+        return Object.values(decoded.cards as any).map(
+          (c: any) => c.save_fields.center
+        )
+      }
     }
+  } catch (e) {
+    console.error('Failed to parse jokers from string:', str, e)
+    return []
   }
   return str.split(';').filter(Boolean) // Remove empty strings if any
 }
