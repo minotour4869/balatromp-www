@@ -1418,7 +1418,7 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue }
 
-async function luaTableToJson(luaString: string): string {
+async function luaTableToJson(luaString: string) {
   const str = luaString.replace(/^return\s*/, '')
   return LuaToJsonConverter.convert(str)
 }
