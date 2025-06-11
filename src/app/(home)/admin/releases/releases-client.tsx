@@ -289,10 +289,7 @@ export function ReleasesClient() {
                 </Select>
               </div>
             </div>
-            <Button
-              type='submit'
-              className='w-full bg-primary text-white hover:bg-primary/90'
-            >
+            <Button type='submit' className='w-full'>
               Add new release
             </Button>
           </form>
