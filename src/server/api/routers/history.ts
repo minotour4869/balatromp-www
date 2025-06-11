@@ -91,9 +91,6 @@ export const history_router = createTRPCRouter({
         groupBy,
       }))
     }),
-  sync: publicProcedure.mutation(async () => {
-    return syncHistory()
-  }),
   user_games: publicProcedure
     .input(
       z.object({
@@ -106,6 +103,19 @@ export const history_router = createTRPCRouter({
         .from(player_games)
         .where(eq(player_games.playerId, input.user_id))
         .orderBy(desc(player_games.gameNum))
+    }),
+  sync: publicProcedure.mutation(async () => {
+    return syncHistory()
+  }),
+  syncByDateRange: publicProcedure
+    .input(
+      z.object({
+        start_date: z.string().optional(),
+        end_date: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return syncHistoryByDateRange(input.start_date, input.end_date)
     }),
 })
 
@@ -154,6 +164,36 @@ export async function syncHistory() {
         value: firstGame,
       },
     })
+
+  const chunkedData = chunk(data.data, 100)
+  for (const chunk of chunkedData) {
+    await insertGameHistory(chunk).catch((e) => {
+      console.error(e)
+    })
+  }
+  return data
+}
+
+export async function syncHistoryByDateRange(
+  start_date?: string,
+  end_date?: string
+) {
+  const searchParams: Record<string, string> = {}
+
+  if (start_date) {
+    searchParams.start_date = start_date
+  }
+
+  if (end_date) {
+    searchParams.end_date = end_date
+  }
+
+  const data = await ky
+    .get('https://api.neatqueue.com/api/history/1226193436521267223', {
+      searchParams,
+      timeout: 60000,
+    })
+    .json<any>()
 
   const chunkedData = chunk(data.data, 100)
   for (const chunk of chunkedData) {

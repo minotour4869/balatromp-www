@@ -124,3 +124,18 @@ export const verificationTokens = pgTable(
   }),
   (t) => [primaryKey({ columns: [t.identifier, t.token] })]
 )
+
+export const releases = pgTable('mod_release', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  name: text('name').notNull(),
+  description: text('description'),
+  version: text('version').notNull(),
+  url: text('url').notNull(),
+  smods_version: text('smods_version').default('latest'),
+  lovely_version: text('lovely_version').default('latest'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
