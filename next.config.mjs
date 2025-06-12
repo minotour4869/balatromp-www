@@ -10,6 +10,10 @@ const withMDX = createMDX()
 /** @type {import("next").NextConfig} */
 const config = {
   output: 'standalone',
+  images: {
+    loader: 'custom',
+    loaderFile: './image-loader.js',
+  },
 }
 const withNextIntl = createNextIntlPlugin()
 export default withNextIntl(withMDX(config))

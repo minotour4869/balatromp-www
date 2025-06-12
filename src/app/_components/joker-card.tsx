@@ -19,6 +19,8 @@ export function JokerCard({ name, img, h = 3 }: JokerCardProps) {
     >
       <OptimizedImage
         src={img}
+        height={190}
+        width={142}
         alt={name}
         className={'!m-0 max-w-24 rounded-md'}
       />

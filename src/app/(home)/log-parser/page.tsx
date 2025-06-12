@@ -928,7 +928,10 @@ export default function LogParser() {
                                         <div
                                           className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}
                                         >
-                                          <OptimizedImage src={event.img} />
+                                          <OptimizedImage
+                                            src={event.img}
+                                            alt={event.img}
+                                          />
                                         </div>
                                       )}
                                     </Fragment>
