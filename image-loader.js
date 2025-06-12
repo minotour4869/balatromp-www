@@ -1,3 +1,4 @@
+//@ts-nocheck
 const cdnUrl = 'https://balatromp.b-cdn.net'
 
 export default function bunnyLoader({ src, width, quality }) {
