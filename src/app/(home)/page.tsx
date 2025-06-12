@@ -253,7 +253,7 @@ export default function Home() {
               </CardContent>
               <div className='mt-auto p-6 pt-0'>
                 <Button variant='outline' className='w-full' asChild>
-                  <Link href='https://discord.gg/E4ZFwWbtT5' target='_blank'>
+                  <Link href='https://discord.gg/bBb5eU2gWc' target='_blank'>
                     Join Our Discord
                   </Link>
                 </Button>
