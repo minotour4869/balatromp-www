@@ -89,7 +89,7 @@ export function StreamCardClient() {
     return null
   }
 
-  const playerData = getPlayerData(rankedUserRank, games)
+  const playerData = getPlayerData(rankedUserRank?.data, games)
 
   const isQueuing = playerState?.status === 'queuing'
   const opponentId = playerState?.currentMatch?.opponentId
@@ -181,7 +181,8 @@ function Opponent({ id, wins }: { id: string; wins?: number }) {
     return null
   }
 
-  const playerData = getPlayerData(rankedUserRank, games)
+  const playerData = getPlayerData(rankedUserRank?.data, games)
+
   return <PlayerInfo playerData={playerData} isReverse isInBattle wins={wins} />
 }
 

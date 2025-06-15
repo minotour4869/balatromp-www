@@ -56,7 +56,7 @@ export function ObsControlPanelClient() {
     channel_id: RANKED_CHANNEL,
   })
 
-  const playersForSelect = players.data?.map((player) => ({
+  const playersForSelect = players.data?.data?.map((player) => ({
     value: player.id,
     label: player.name,
   }))
@@ -112,12 +112,12 @@ export function ObsControlPanelClient() {
   )
   const player1Data = useMemo(() => {
     return player1Info && player1Games
-      ? getPlayerData(player1Info, player1Games)
+      ? getPlayerData(player1Info.data, player1Games)
       : null
   }, [player1Info, player1Games])
   const player2Data = useMemo(() => {
     return player2Info && player2Games
-      ? getPlayerData(player2Info, player2Games)
+      ? getPlayerData(player2Info.data, player2Games)
       : null
   }, [player2Info, player2Games])
 

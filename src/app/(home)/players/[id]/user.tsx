@@ -83,15 +83,16 @@ export function UserInfo() {
       channel_id: VANILLA_CHANNEL,
     }
   )
-  const [vanillaUserRank] = api.leaderboard.get_user_rank.useSuspenseQuery({
+  const [vanillaUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
     channel_id: VANILLA_CHANNEL,
     user_id: id,
   })
-  const [rankedUserRank] = api.leaderboard.get_user_rank.useSuspenseQuery({
+  const [rankedUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
     channel_id: RANKED_CHANNEL,
     user_id: id,
   })
-
+  const rankedUserRank = rankedUserRankQ?.data
+  const vanillaUserRank = vanillaUserRankQ?.data
   const filteredGamesByLeaderboard =
     leaderboardFilter === 'all'
       ? games
