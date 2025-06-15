@@ -173,7 +173,7 @@ function PvpHandScoresTable({
   // Group hand scores by player and filter out zero scores
   const logOwnerScores = sortedHandScores.filter((score) => score.isLogOwner)
   const opponentScores = sortedHandScores.filter(
-    (score) => !score.isLogOwner && score.totalScore > 0
+    (score) => !score.isLogOwner && score.gainedScore > 0
   )
 
   // Determine the maximum number of hands
