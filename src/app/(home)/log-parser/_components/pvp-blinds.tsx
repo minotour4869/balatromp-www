@@ -13,7 +13,8 @@ import {
 // Define the structure for hand scores within a PVP blind
 export type HandScore = {
   timestamp: Date
-  score: number
+  gainedScore: number
+  totalScore: number
   handsLeft: number
   isLogOwner: boolean
 }
@@ -172,7 +173,7 @@ function PvpHandScoresTable({
   // Group hand scores by player and filter out zero scores
   const logOwnerScores = sortedHandScores.filter((score) => score.isLogOwner)
   const opponentScores = sortedHandScores.filter(
-    (score) => !score.isLogOwner && score.score > 0
+    (score) => !score.isLogOwner && score.gainedScore > 0
   )
 
   // Determine the maximum number of hands
@@ -183,11 +184,11 @@ function PvpHandScoresTable({
 
   // Calculate total scores
   const totalLogOwnerScore = logOwnerScores.reduce(
-    (sum, score) => sum + score.score,
+    (sum, score) => sum + score.gainedScore,
     0
   )
   const totalOpponentScore = opponentScores.reduce(
-    (sum, score) => sum + score.score,
+    (sum, score) => sum + score.gainedScore,
     0
   )
 
@@ -211,12 +212,12 @@ function PvpHandScoresTable({
             <TableCell className='text-right font-mono'>{handNumber}</TableCell>
             <TableCell className='text-right font-mono'>
               {index < logOwnerScores.length
-                ? formatNumber(logOwnerScores[index]?.score)
+                ? formatNumber(logOwnerScores[index]?.gainedScore)
                 : '-'}
             </TableCell>
             <TableCell className='text-right font-mono'>
               {index < opponentScores.length
-                ? formatNumber(opponentScores[index]?.score)
+                ? formatNumber(opponentScores[index]?.gainedScore)
                 : '-'}
             </TableCell>
           </TableRow>

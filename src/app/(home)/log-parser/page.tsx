@@ -355,12 +355,12 @@ export default function LogParser() {
             const handsLeftMatch = line.match(/handsLeft: *(\d+)/)
 
             if (scoreMatch?.[1]) {
-              const score = Number.parseInt(scoreMatch[1], 10)
+              const totalScore = Number.parseInt(scoreMatch[1], 10)
               const handsLeft = handsLeftMatch?.[1]
                 ? Number.parseInt(handsLeftMatch[1], 10)
                 : 0
 
-              if (!Number.isNaN(score)) {
+              if (!Number.isNaN(totalScore)) {
                 const currentBlindIndex = currentGame.currentPvpBlind - 1
                 if (
                   currentBlindIndex >= 0 &&
@@ -371,21 +371,23 @@ export default function LogParser() {
                     continue
                   }
                   // Update opponent score in current blind
-                  currentBlind.opponentScore += score
+                  const gainedScore = totalScore - currentBlind.opponentScore
+                  currentBlind.opponentScore = totalScore
 
                   // Add hand score
                   currentBlind.handScores.push({
                     timestamp,
-                    score,
+                    gainedScore,
+                    totalScore,
                     handsLeft,
                     isLogOwner: false,
                   })
 
-                  // Add event for opponent score only if score > 0
-                  if (score > 0) {
+                  // Add event for opponent score only if gainedScore > 0
+                  if (gainedScore > 0) {
                     currentGame.events.push({
                       timestamp,
-                      text: `Opponent score: ${score} (Hands left: ${handsLeft})`,
+                      text: `Opponent scored: ${gainedScore} (Total: ${totalScore}, hands left: ${handsLeft})`,
                       type: 'event',
                     })
                   }
@@ -600,12 +602,12 @@ export default function LogParser() {
               const handsLeftMatch = line.match(/handsLeft:(\d+)/)
 
               if (scoreMatch?.[1]) {
-                const score = Number.parseInt(scoreMatch[1], 10)
+                const totalScore = Number.parseInt(scoreMatch[1], 10)
                 const handsLeft = handsLeftMatch?.[1]
                   ? Number.parseInt(handsLeftMatch[1], 10)
                   : 0
 
-                if (!Number.isNaN(score)) {
+                if (!Number.isNaN(totalScore)) {
                   const currentBlindIndex = currentGame.currentPvpBlind - 1
                   if (
                     currentBlindIndex >= 0 &&
@@ -617,21 +619,23 @@ export default function LogParser() {
                       continue
                     }
                     // Update log owner score in current blind
-                    currentBlind.logOwnerScore += score
+                    const gainedScore = totalScore - currentBlind.logOwnerScore
+                    currentBlind.logOwnerScore = totalScore
 
                     // Add hand score
                     currentBlind.handScores.push({
                       timestamp,
-                      score,
+                      gainedScore,
+                      totalScore,
                       handsLeft,
                       isLogOwner: true,
                     })
 
-                    // Add event for log owner score only if score > 0
-                    if (score > 0) {
+                    // Add event for log owner score only if gainedScore > 0
+                    if (gainedScore > 0) {
                       currentGame.events.push({
                         timestamp,
-                        text: `Your score: ${score} (Hands left: ${handsLeft})`,
+                        text: `You scored: ${gainedScore} (Total: ${totalScore}, hands left: ${handsLeft})`,
                         type: 'event',
                       })
                     }
