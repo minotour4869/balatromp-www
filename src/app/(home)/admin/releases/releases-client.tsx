@@ -11,7 +11,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -80,8 +79,42 @@ export function ReleasesClient() {
 
   const [smodsVersions, setSmodsVersions] = useState<string[]>(['latest'])
   const [lovelyVersions, setLovelyVersions] = useState<string[]>(['latest'])
+  const [newBranch, setNewBranch] = useState<string>('')
+
+  // Fetch branches from the database
+  const [branches] = api.branches.getBranches.useSuspenseQuery()
+  console.log(branches)
+  // Add branch mutation
+  const addBranch = api.branches.addBranch.useMutation({
+    onSuccess: () => {
+      utils.branches.getBranches.invalidate()
+      toast.success('Branch added successfully')
+      setNewBranch('')
+    },
+    onError: (error) => {
+      toast.error(`Error adding branch: ${error.message}`)
+    },
+  })
+
+  // Delete branch mutation
+  const deleteBranch = api.branches.deleteBranch.useMutation({
+    onSuccess: () => {
+      utils.branches.getBranches.invalidate()
+      toast.success('Branch deleted successfully')
+    },
+    onError: (error) => {
+      toast.error(`Error deleting branch: ${error.message}`)
+    },
+  })
+
+  const handleAddBranch = () => {
+    if (newBranch && !branches.some((branch) => branch.name === newBranch)) {
+      addBranch.mutate({ name: newBranch })
+    }
+  }
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [branchManagementOpen, setBranchManagementOpen] = useState(false)
   const [selectedRelease, setSelectedRelease] = useState<
     (typeof releases)[0] | null
   >(null)
@@ -126,6 +159,7 @@ export function ReleasesClient() {
       url: '',
       smods_version: 'latest',
       lovely_version: 'latest',
+      branchId: 1,
     },
   })
 
@@ -138,6 +172,7 @@ export function ReleasesClient() {
       url: '',
       smods_version: 'latest',
       lovely_version: 'latest',
+      branchId: 1,
     },
   })
 
@@ -151,6 +186,7 @@ export function ReleasesClient() {
       url: release.url,
       smods_version: release.smods_version || 'latest',
       lovely_version: release.lovely_version || 'latest',
+      branchId: release.branchId,
     })
     setEditDialogOpen(true)
   }
@@ -170,6 +206,7 @@ export function ReleasesClient() {
               <TableHead>Version</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>URL</TableHead>
+              <TableHead>Branch</TableHead>
               <TableHead>Steamodded Version</TableHead>
               <TableHead>Lovely Injector Version</TableHead>
               <TableHead className='text-right'>Actions</TableHead>
@@ -196,6 +233,7 @@ export function ReleasesClient() {
                     <div className='truncate'>{release.url}</div>
                   </a>
                 </TableCell>
+                <TableCell>{release.branchName || 'main'}</TableCell>
                 <TableCell>{release.smods_version || 'latest'}</TableCell>
                 <TableCell>{release.lovely_version || 'latest'}</TableCell>
                 <TableCell className='space-x-2 text-right'>
@@ -247,7 +285,7 @@ export function ReleasesClient() {
               <Label htmlFor='url'>URL</Label>
               <Input id='url' {...form.register('url')} />
             </div>
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-3 gap-4'>
               <div className='grid grid-cols-1 gap-2'>
                 <Label htmlFor='smods_version'>Steamodded Version</Label>
                 <Select
@@ -287,6 +325,44 @@ export function ReleasesClient() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className='grid grid-cols-1 gap-2'>
+                <Label htmlFor='branch'>Branch</Label>
+                <div className='flex gap-2'>
+                  <Select
+                    defaultValue={'1'}
+                    onValueChange={(value) =>
+                      form.setValue('branchId', Number(value))
+                    }
+                  >
+                    <SelectTrigger id='branch'>
+                      <SelectValue placeholder='Select branch' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem
+                          key={branch.id}
+                          value={branch.id.toString()}
+                        >
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <div className='grid grid-cols-1 gap-2'>
+              <div className='flex justify-between items-center'>
+                <Label htmlFor='branch-management'>Branch Management</Label>
+                <Button 
+                  type='button' 
+                  variant='outline' 
+                  size='sm'
+                  onClick={() => setBranchManagementOpen(true)}
+                >
+                  Manage Branches
+                </Button>
               </div>
             </div>
             <Button type='submit' className='w-full'>
@@ -330,7 +406,7 @@ export function ReleasesClient() {
                 <Label htmlFor='edit-url'>URL</Label>
                 <Input id='edit-url' {...editForm.register('url')} />
               </div>
-              <div className='grid grid-cols-2 gap-4'>
+              <div className='grid grid-cols-3 gap-4'>
                 <div className='grid grid-cols-1 gap-2'>
                   <Label htmlFor='edit-smods_version'>Steamodded Version</Label>
                   <Select
@@ -368,6 +444,29 @@ export function ReleasesClient() {
                       {lovelyVersions.map((version) => (
                         <SelectItem key={version} value={version}>
                           {version}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='grid grid-cols-1 gap-2'>
+                  <Label htmlFor='edit-branch'>Branch</Label>
+                  <Select
+                    value={editForm.watch('branchId').toString()}
+                    onValueChange={(value) =>
+                      editForm.setValue('branchId', Number(value))
+                    }
+                  >
+                    <SelectTrigger id='edit-branch'>
+                      <SelectValue placeholder='Select branch' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem
+                          key={branch.id}
+                          value={branch.id.toString()}
+                        >
+                          {branch.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -414,6 +513,80 @@ export function ReleasesClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Branch Management Modal */}
+      <Dialog open={branchManagementOpen} onOpenChange={setBranchManagementOpen}>
+        <DialogContent className='sm:max-w-[500px]'>
+          <DialogHeader>
+            <DialogTitle>Manage Branches</DialogTitle>
+            <DialogDescription>
+              Add new branches or remove existing ones.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <div className='grid grid-cols-1 gap-2'>
+              <Label htmlFor='modal-new-branch'>Add New Branch</Label>
+              <div className='flex gap-2'>
+                <Input
+                  id='modal-new-branch'
+                  value={newBranch}
+                  onChange={(e) => setNewBranch(e.target.value)}
+                  placeholder='Enter new branch name'
+                />
+                <Button
+                  type='button'
+                  onClick={handleAddBranch}
+                  disabled={
+                    !newBranch ||
+                    branches.some((branch) => branch.name === newBranch)
+                  }
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+            <div className='grid grid-cols-1 gap-2'>
+              <Label>Existing Branches</Label>
+              <div className='max-h-60 overflow-y-auto rounded-md border p-2'>
+                {branches.length === 0 ? (
+                  <p className='text-muted-foreground text-sm'>
+                    No branches found
+                  </p>
+                ) : (
+                  <ul className='space-y-1'>
+                    {branches.map((branch) => (
+                      <li
+                        key={branch.id}
+                        className='flex items-center justify-between rounded-md px-2 py-1 hover:bg-muted'
+                      >
+                        <span>{branch.name}</span>
+                        {branch.name !== 'main' && (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive'
+                            onClick={() =>
+                              deleteBranch.mutate({ id: branch.id })
+                            }
+                          >
+                            <Trash2 className='h-4 w-4' />
+                            <span className='sr-only'>Delete branch</span>
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type='button' onClick={() => setBranchManagementOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

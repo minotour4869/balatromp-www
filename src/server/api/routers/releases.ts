@@ -4,13 +4,28 @@ import {
   publicProcedure,
 } from '@/server/api/trpc'
 import { db } from '@/server/db'
-import { releases } from '@/server/db/schema'
-import { z } from 'zod'
+import { branches, releases } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 export const releasesRouter = createTRPCRouter({
   getReleases: publicProcedure.query(async () => {
-    const res = await db.select().from(releases)
+    const res = await db
+      .select({
+        id: releases.id,
+        name: releases.name,
+        description: releases.description,
+        version: releases.version,
+        url: releases.url,
+        smods_version: releases.smods_version,
+        lovely_version: releases.lovely_version,
+        branchId: releases.branchId,
+        branchName: branches.name,
+        createdAt: releases.createdAt,
+        updatedAt: releases.updatedAt,
+      })
+      .from(releases)
+      .leftJoin(branches, eq(releases.branchId, branches.id))
     return res
   }),
   addRelease: adminProcedure
@@ -22,6 +37,7 @@ export const releasesRouter = createTRPCRouter({
         description: z.string(),
         smods_version: z.string().default('latest'),
         lovely_version: z.string().default('latest'),
+        branchId: z.number().default(1),
       })
     )
     .mutation(async ({ input }) => {
@@ -34,6 +50,7 @@ export const releasesRouter = createTRPCRouter({
           description: input.description,
           smods_version: input.smods_version,
           lovely_version: input.lovely_version,
+          branchId: input.branchId,
         })
         .returning()
 
@@ -49,6 +66,7 @@ export const releasesRouter = createTRPCRouter({
         description: z.string(),
         smods_version: z.string().default('latest'),
         lovely_version: z.string().default('latest'),
+        branchId: z.number().default(1),
       })
     )
     .mutation(async ({ input }) => {
@@ -61,6 +79,7 @@ export const releasesRouter = createTRPCRouter({
           description: input.description,
           smods_version: input.smods_version,
           lovely_version: input.lovely_version,
+          branchId: input.branchId,
         })
         .where(eq(releases.id, input.id))
         .returning()
@@ -74,9 +93,7 @@ export const releasesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ input }) => {
-      await db
-        .delete(releases)
-        .where(eq(releases.id, input.id))
+      await db.delete(releases).where(eq(releases.id, input.id))
 
       return { success: true }
     }),

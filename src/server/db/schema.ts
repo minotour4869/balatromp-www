@@ -125,6 +125,13 @@ export const verificationTokens = pgTable(
   (t) => [primaryKey({ columns: [t.identifier, t.token] })]
 )
 
+export const branches = pgTable('mod_branches', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 export const releases = pgTable('mod_release', {
   id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
   name: text('name').notNull(),
@@ -133,9 +140,24 @@ export const releases = pgTable('mod_release', {
   url: text('url').notNull(),
   smods_version: text('smods_version').default('latest'),
   lovely_version: text('lovely_version').default('latest'),
+  branchId: integer('branch_id')
+    .references(() => branches.id)
+    .notNull()
+    .default(1),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
 })
+
+export const branchesRelations = relations(branches, ({ many }) => ({
+  releases: many(releases),
+}))
+
+export const releasesRelations = relations(releases, ({ one }) => ({
+  branch: one(branches, {
+    fields: [releases.branchId],
+    references: [branches.id],
+  }),
+}))

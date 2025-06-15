@@ -17,7 +17,10 @@ export default async function ReleasesPage() {
     )
   }
 
-  await api.releases.getReleases.prefetch()
+  await Promise.all([
+    api.releases.getReleases.prefetch(),
+    api.branches.getBranches.prefetch(),
+  ])
 
   return (
     <Suspense>
