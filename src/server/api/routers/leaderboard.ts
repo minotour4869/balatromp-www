@@ -12,9 +12,11 @@ export const leaderboard_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      return (await service.getLeaderboard(
-        input.channel_id
-      )) as LeaderboardEntry[]
+      const result = await service.getLeaderboard(input.channel_id)
+      return {
+        data: result.data as LeaderboardEntry[],
+        isStale: result.isStale
+      }
     }),
   get_user_rank: publicProcedure
     .input(
@@ -24,6 +26,11 @@ export const leaderboard_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      return await service.getUserRank(input.channel_id, input.user_id)
+      const result = await service.getUserRank(input.channel_id, input.user_id)
+      if (!result) return null
+      return {
+        data: result.data,
+        isStale: result.isStale
+      }
     }),
 })

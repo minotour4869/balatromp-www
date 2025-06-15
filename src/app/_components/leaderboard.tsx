@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -131,21 +132,26 @@ export function LeaderboardPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Fetch leaderboard data
-  const [rankedLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
-  })
+  const [rankedLeaderboardResult] =
+    api.leaderboard.get_leaderboard.useSuspenseQuery({
+      channel_id: RANKED_CHANNEL,
+    })
 
-  const [vanillaLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery(
-    {
+  const [vanillaLeaderboardResult] =
+    api.leaderboard.get_leaderboard.useSuspenseQuery({
       channel_id: VANILLA_CHANNEL,
-    }
-  )
+    })
+
   // Get the current leaderboard based on selected tab
-  const currentLeaderboard = useMemo(
+  const currentLeaderboardResult = useMemo(
     () =>
-      leaderboardType === 'ranked' ? rankedLeaderboard : vanillaLeaderboard,
-    [leaderboardType, rankedLeaderboard, vanillaLeaderboard]
+      leaderboardType === 'ranked'
+        ? rankedLeaderboardResult
+        : vanillaLeaderboardResult,
+    [leaderboardType, rankedLeaderboardResult, vanillaLeaderboardResult]
   )
+
+  const currentLeaderboard = currentLeaderboardResult.data
 
   const filteredLeaderboard = useMemo(
     () =>
@@ -238,6 +244,16 @@ export function LeaderboardPage() {
     <div className='flex flex-1 flex-col overflow-hidden'>
       <div className='mx-auto flex w-[calc(100%-1rem)] max-w-fd-container flex-1 flex-col'>
         <div className='flex flex-1 flex-col overflow-hidden border-none'>
+          {currentLeaderboardResult.isStale && (
+            <Alert className='my-4 border-amber-500 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300'>
+              <AlertTitle>Stale Data</AlertTitle>
+              <AlertDescription>
+                The leaderboard data is currently stale due to issues with the
+                neatqueue service. We're showing you the latest available data.
+                Please check back later.
+              </AlertDescription>
+            </Alert>
+          )}
           <Tabs
             defaultValue={leaderboardType}
             value={leaderboardType}
