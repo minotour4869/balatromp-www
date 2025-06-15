@@ -206,20 +206,20 @@ export function UserInfo() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant={'ghost'} size={'iconSm'}>
-                      <EllipsisVertical className={'size-4'} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/stream-card/${id}`} target={'_blank'}>
-                        Stream widget <ExternalIcon />
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/*<DropdownMenu>*/}
+                {/*  <DropdownMenuTrigger asChild>*/}
+                {/*    <Button variant={'ghost'} size={'iconSm'}>*/}
+                {/*      <EllipsisVertical className={'size-4'} />*/}
+                {/*    </Button>*/}
+                {/*  </DropdownMenuTrigger>*/}
+                {/*  <DropdownMenuContent>*/}
+                {/*    <DropdownMenuItem asChild>*/}
+                {/*      <Link href={`/stream-card/${id}`} target={'_blank'}>*/}
+                {/*        Stream widget <ExternalIcon />*/}
+                {/*      </Link>*/}
+                {/*    </DropdownMenuItem>*/}
+                {/*  </DropdownMenuContent>*/}
+                {/*</DropdownMenu>*/}
               </div>
 
               <p className='pt-2 text-gray-500 text-sm dark:text-zinc-400'>

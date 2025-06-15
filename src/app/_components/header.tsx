@@ -1,7 +1,20 @@
+'use client'
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { auth } from '@/server/auth'
 import { ThemeToggle } from 'fumadocs-ui/components/layout/theme-toggle'
 import type { HomeLayoutProps } from 'fumadocs-ui/layouts/home'
 import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import { replaceOrDefault } from 'fumadocs-ui/layouts/shared'
+import { LogIn, LogOut, Tv, User } from 'lucide-react'
+import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Fragment } from 'react'
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from './home/menu'
@@ -15,13 +28,15 @@ import {
 import { Navbar } from './home/navbar'
 import { LargeSearchToggle, SearchToggle } from './search-toggle'
 
-export function Header({
+export async function Header({
   nav: { enableSearch = true, ...nav } = {},
   finalLinks,
   themeSwitch,
 }: HomeLayoutProps & {
   finalLinks: LinkItemType[]
 }) {
+  const session = await auth()
+  const isAuthenticated = session?.user
   const navItems = finalLinks.filter((item) =>
     ['nav', 'all'].includes(item.on ?? 'all')
   )
@@ -58,6 +73,65 @@ export function Header({
         {replaceOrDefault(
           themeSwitch,
           <ThemeToggle className='max-lg:hidden' mode={themeSwitch?.mode} />
+        )}
+
+        {/* Sign In Button or User Menu */}
+        {isAuthenticated && session?.user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' className='relative h-9 w-9 rounded-full'>
+                <Avatar className='h-9 w-9'>
+                  <AvatarImage
+                    src={session.user.image ?? ''}
+                    alt={session.user.name ?? 'User'}
+                  />
+                  <AvatarFallback className='bg-violet-50 text-violet-600 dark:bg-violet-900/50 dark:text-violet-300'>
+                    {session.user.name?.slice(0, 2).toUpperCase() ?? 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className='w-56' align='end' forceMount>
+              <div className='flex items-center justify-start gap-2 p-2'>
+                <div className='flex flex-col space-y-1 leading-none'>
+                  <p className='font-medium'>{session.user.name}</p>
+                </div>
+              </div>
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/players/${session.user.discord_id}`}
+                  className='flex w-full items-center'
+                >
+                  <User className='mr-2 h-4 w-4' />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/stream-card/${session.user.discord_id}`}
+                  className='flex w-full items-center'
+                  target='_blank'
+                >
+                  <Tv className='mr-2 h-4 w-4' />
+                  <span>Stream Widget</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => signOut()}>
+                <LogOut className='mr-2 h-4 w-4' />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            variant='outline'
+            size='sm'
+            className='text-gray-700 hover:bg-violet-50 hover:text-violet-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-violet-400'
+            onClick={() => signIn('discord')}
+          >
+            <LogIn className='mr-2 h-4 w-4' />
+            Sign In
+          </Button>
         )}
       </div>
       <ul className='flex flex-row items-center'>
