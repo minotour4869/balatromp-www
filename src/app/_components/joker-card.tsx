@@ -1,6 +1,6 @@
 'use client'
 
-import { OptimizedImage } from '@/components/optimized-image'
+import Image from 'next/image'
 import type { ElementType } from 'react'
 import slugify from 'slugify'
 
@@ -17,7 +17,7 @@ export function JokerCard({ name, img, h = 3 }: JokerCardProps) {
       className={'flex scroll-mt-36 flex-col items-center gap-2'}
       id={`${slugify(name, { lower: true, strict: true })}-toc`}
     >
-      <OptimizedImage
+      <Image
         src={img}
         height={190}
         width={142}

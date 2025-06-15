@@ -1,7 +1,6 @@
 'use client'
 
 import { LuaToJsonConverter } from '@/app/(home)/log-parser/lua-parser'
-import { OptimizedImage } from '@/components/optimized-image'
 import {
   Card,
   CardContent,
@@ -36,6 +35,7 @@ import {
 } from '@/components/ui/tooltip'
 import { jokers } from '@/shared/jokers'
 import { useFormatter } from 'next-intl'
+import Image from 'next/image'
 import { Fragment, useState } from 'react'
 import { type PvpBlind, PvpBlindsCard } from './_components/pvp-blinds'
 // Define the structure for individual log events within a game
@@ -928,7 +928,7 @@ export default function LogParser() {
                                         <div
                                           className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}
                                         >
-                                          <OptimizedImage
+                                          <Image
                                             src={event.img}
                                             alt={event.img}
                                           />
@@ -998,7 +998,7 @@ export default function LogParser() {
                                             'flex flex-col items-center justify-center gap-2'
                                           }
                                         >
-                                          <OptimizedImage
+                                          <Image
                                             src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
                                           />
@@ -1037,7 +1037,7 @@ export default function LogParser() {
                                             'flex flex-col items-center justify-center gap-2'
                                           }
                                         >
-                                          <OptimizedImage
+                                          <Image
                                             src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
                                           />

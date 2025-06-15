@@ -1,8 +1,7 @@
 import type { Player } from '@/app/(home)/major-league-balatro/types'
-import { OptimizedImage } from '@/components/optimized-image'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SiTwitch, SiYoutube } from '@icons-pack/react-simple-icons'
+import Image from 'next/image'
 import Link from 'next/link'
 
 export type PlayerCardProps = {
@@ -16,7 +15,7 @@ export function PlayerCard(player: PlayerCardProps) {
     <Card className='overflow-hidden py-0'>
       <div className='relative aspect-square bg-muted'>
         <div className='absolute inset-0 flex items-center justify-center'>
-          <OptimizedImage
+          <Image
             src={player.picture}
             alt={player.name}
             className={'h-full w-full object-cover'}
