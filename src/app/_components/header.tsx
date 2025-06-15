@@ -28,15 +28,15 @@ import {
 import { Navbar } from './home/navbar'
 import { LargeSearchToggle, SearchToggle } from './search-toggle'
 
-export async function Header({
+export function Header({
   nav: { enableSearch = true, ...nav } = {},
   finalLinks,
   themeSwitch,
 }: HomeLayoutProps & {
   finalLinks: LinkItemType[]
 }) {
-  const session = await auth()
-  const isAuthenticated = session?.user
+  const { data: session, status } = useSession()
+  const isAuthenticated = status === 'authenticated'
   const navItems = finalLinks.filter((item) =>
     ['nav', 'all'].includes(item.on ?? 'all')
   )
