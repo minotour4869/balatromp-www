@@ -289,7 +289,16 @@ export default function LogParser() {
 
         // --- Lobby and Options Parsing ---
         if (lineLower.includes('lobbyoptions')) {
-          const optionsStr = line.split(' Client sent message:')[1]?.trim()
+          const optionsStr = line.includes('Client got lobbyOptions message:')
+            ? line
+                .split(' Client got lobbyOptions message:  ')[1]
+                ?.trim()
+                ?.replaceAll('(', '')
+                ?.replaceAll(')', ',')
+            : // ?.replaceAll(' ', '')
+              line
+                .split(' Client sent message:')[1]
+                ?.trim()
           if (optionsStr) {
             lastSeenLobbyOptions = parseLobbyOptions(optionsStr)
             if (currentGame && !currentGame.options) {
@@ -1234,6 +1243,7 @@ function ShopSpendingTable({
 
 // Helper to parse lobby options string (no changes needed)
 function parseLobbyOptions(optionsStr: string): GameOptions {
+  console.log(optionsStr)
   const options: GameOptions = {}
   const params = optionsStr.split(',')
   for (const param of params) {
@@ -1268,6 +1278,7 @@ function parseLobbyOptions(optionsStr: string): GameOptions {
         break
     }
   }
+  console.log(options)
   return options
 }
 
@@ -1458,7 +1469,6 @@ async function decodePackedString(encodedString: string): Promise<JsonValue> {
 
     // Convert Lua table to JSON
     const jsonString = await luaTableToJson(decompressedString)
-    console.log(jsonString)
     const result = JSON.parse(jsonString) as JsonValue
     return result
   } catch (error) {
