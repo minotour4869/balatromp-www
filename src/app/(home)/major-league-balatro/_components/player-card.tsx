@@ -16,6 +16,8 @@ export function PlayerCard(player: PlayerCardProps) {
       <div className='relative aspect-square bg-muted'>
         <div className='absolute inset-0 flex items-center justify-center'>
           <Image
+            width={142}
+            height={190}
             src={player.picture}
             alt={player.name}
             className={'h-full w-full object-cover'}

@@ -933,6 +933,8 @@ export default function LogParser() {
                                           className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}
                                         >
                                           <Image
+                                            width={142}
+                                            height={190}
                                             src={event.img}
                                             alt={event.img}
                                           />
@@ -1005,6 +1007,8 @@ export default function LogParser() {
                                           <Image
                                             src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
+                                            width={142}
+                                            height={190}
                                           />
                                           <span>{cleanName}</span>
                                         </div>
@@ -1044,6 +1048,8 @@ export default function LogParser() {
                                           <Image
                                             src={`/cards/${jokerName}.png`}
                                             alt={cleanName}
+                                            width={142}
+                                            height={190}
                                           />
                                           <span>{cleanName}</span>
                                         </div>
