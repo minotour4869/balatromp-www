@@ -45,7 +45,26 @@ type LogEvent = {
   type: 'event' | 'status' | 'system' | 'shop' | 'action' | 'error' | 'info'
   img?: string
 }
-
+const STAKE = {
+  1: 'White Stake',
+  2: 'Red Stake',
+  3: 'Green Stake',
+  4: 'Black Stake',
+  5: 'Blue Stake',
+  6: 'Purple Stake',
+  7: 'Orange Stake',
+  8: 'Gold Stake',
+}
+const STAKE_IMG = {
+  1: '/stakes/white_stake.png',
+  2: '/stakes/red_stake.png',
+  3: '/stakes/green_stake.png',
+  4: '/stakes/black_stake.png',
+  5: '/stakes/blue_stake.png',
+  6: '/stakes/purple_stake.png',
+  7: '/stakes/orange_stake.png',
+  8: '/stakes/gold_stake.png',
+}
 // PVP blind types (PvpBlind and HandScore) are now imported from the PvpBlindsCard component
 
 // Define the structure for game options parsed from lobbyOptions
@@ -880,10 +899,26 @@ export default function LogParser() {
                               <strong>Ruleset:</strong>{' '}
                               {game.options?.ruleset || 'Default'}
                             </p>
-                            <p>
+                            <div className={'flex gap-1.5'}>
                               <strong>Stake:</strong>{' '}
-                              {game.options?.stake ?? 'Unknown'}
-                            </p>
+                              {game.options?.stake && (
+                                <div className={'flex items-center gap-1.5'}>
+                                  {/*@ts-ignore*/}
+                                  {STAKE_IMG[game.options.stake] && (
+                                    <img
+                                      className={'size-5 shrink-0'}
+                                      width={20}
+                                      height={20}
+                                      // @ts-ignore
+                                      src={STAKE_IMG[game.options.stake]}
+                                      alt={'Stake'}
+                                    />
+                                  )}
+                                  {/*@ts-ignore*/}
+                                  {STAKE[game.options?.stake] ?? 'Unknown'}
+                                </div>
+                              )}
+                            </div>
                             <p>
                               <strong>Different Decks:</strong>{' '}
                               {boolStrToText(game.options?.different_decks)}
