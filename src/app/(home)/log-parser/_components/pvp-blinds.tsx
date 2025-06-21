@@ -166,9 +166,17 @@ function PvpHandScoresTable({
   }
 
   // Sort hand scores by timestamp to maintain chronological order
-  const sortedHandScores = [...handScores].sort(
-    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-  )
+  const sortedHandScores = [...handScores].sort((a, b) => {
+    const aTime =
+      a.timestamp instanceof Date
+        ? a.timestamp.getTime()
+        : new Date(a.timestamp).getTime()
+    const bTime =
+      b.timestamp instanceof Date
+        ? b.timestamp.getTime()
+        : new Date(b.timestamp).getTime()
+    return aTime - bTime
+  })
 
   // Group hand scores by player and filter out zero scores
   const logOwnerScores = sortedHandScores.filter((score) => score.isLogOwner)

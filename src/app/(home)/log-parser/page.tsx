@@ -883,7 +883,7 @@ export default function LogParser() {
         }
       }
 
-      setParsedGames(convertDates(games))
+      setParsedGames(games)
     } catch (err) {
       console.error('Error parsing log:', err)
       setError(
