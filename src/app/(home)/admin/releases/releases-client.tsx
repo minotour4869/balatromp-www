@@ -94,7 +94,6 @@ export function ReleasesClient() {
 
   // Fetch branches from the database
   const [branches] = api.branches.getBranches.useSuspenseQuery()
-  console.log(branches)
 
   // Handle file upload
   const [editIsUploading, setEditIsUploading] = useState(false)
@@ -104,6 +103,9 @@ export function ReleasesClient() {
     if (files.length === 0) return
 
     const file = files[0]
+    if (!file) {
+      return
+    }
     if (!file.name.endsWith('.zip')) {
       toast.error('Only zip files are allowed')
       return
@@ -119,6 +121,9 @@ export function ReleasesClient() {
 
     try {
       const formData = new FormData()
+      if (!file) {
+        return
+      }
       formData.append('file', file)
 
       const response = await fetch('/api/upload', {
@@ -544,7 +549,7 @@ export function ReleasesClient() {
                         <DropzoneGroup className='gap-2'>
                           {editIsUploading ? (
                             <div className='flex items-center justify-center'>
-                              <div className='h-6 w-6 animate-spin rounded-full border-primary border-b-2'></div>
+                              <div className='h-6 w-6 animate-spin rounded-full border-primary border-b-2' />
                             </div>
                           ) : (
                             <DropzoneUploadIcon />
