@@ -36,7 +36,8 @@ import {
 import { jokers } from '@/shared/jokers'
 import { useFormatter } from 'next-intl'
 import Image from 'next/image'
-import { Fragment, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Fragment, useEffect, useState } from 'react'
 import { type PvpBlind, PvpBlindsCard } from './_components/pvp-blinds'
 // Define the structure for individual log events within a game
 type LogEvent = {
@@ -171,19 +172,143 @@ function boolStrToText(str: string | boolean | undefined | null): string {
   return str
 }
 
+// Helper function to convert date strings to Date objects recursively
+function convertDates<T>(obj: T): T {
+  if (!obj || typeof obj !== 'object') {
+    return obj
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertDates(item)) as unknown as T
+  }
+
+  const result = { ...obj } as any
+
+  // Process each property
+  for (const key in result) {
+    const value = result[key]
+
+    // Check if the value is a date string (ISO format)
+    if (
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+    ) {
+      result[key] = new Date(value)
+    }
+    // Also handle date strings in the format used in the logs (YYYY-MM-DD HH:MM:SS)
+    else if (
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value)
+    ) {
+      result[key] = new Date(value)
+    }
+    // Recursively process nested objects and arrays
+    else if (value && typeof value === 'object') {
+      result[key] = convertDates(value)
+    }
+  }
+
+  return result
+}
+
 // Main component
 export default function LogParser() {
   const formatter = useFormatter()
+  const searchParams = useSearchParams()
   const [parsedGames, setParsedGames] = useState<Game[]>([])
+  console.log(parsedGames)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const parseLogFile = async (file: File) => {
+  // Check for logId query parameter and load the parsed data if it exists
+  useEffect(() => {
+    const logId = searchParams.get('logId')
+    const fileUrl = searchParams.get('fileUrl')
+
+    if (logId) {
+      // If logId is provided, fetch the parsed data from the database
+      setIsLoading(true)
+      setError(null)
+      setParsedGames([])
+
+      fetch(`/api/logs?id=${logId}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch log file')
+          }
+          return response.json()
+        })
+        .then((data) => {
+          // Use the parsed JSON data directly from the database
+          if (data.parsedJson && Array.isArray(data.parsedJson)) {
+            const parsedGamesWithDates = convertDates(data.parsedJson)
+            setParsedGames(parsedGamesWithDates)
+          } else {
+            setError('No parsed games found in the log file.')
+          }
+          setIsLoading(false)
+        })
+        .catch((err) => {
+          console.error('Error loading log file:', err)
+          setError(`Failed to load log file: ${err.message}`)
+          setIsLoading(false)
+        })
+    } else if (fileUrl) {
+      // For backward compatibility, still support fileUrl
+      // But this should be deprecated in favor of logId
+      setIsLoading(true)
+      setError(null)
+      setParsedGames([])
+
+      fetch(fileUrl)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch log file')
+          }
+          return response.text()
+        })
+        .then((content) => {
+          // Create a File object from the content
+          const file = new File([content], 'log.txt', { type: 'text/plain' })
+          // Parse the file
+          parseLogFile(file, true)
+        })
+        .catch((err) => {
+          console.error('Error loading log file:', err)
+          setError(`Failed to load log file: ${err.message}`)
+          setIsLoading(false)
+        })
+    }
+  }, [searchParams])
+
+  const parseLogFile = async (file: File, skipUpload?: boolean) => {
     setIsLoading(true)
     setError(null)
     setParsedGames([])
+    let logFileId = null
 
     try {
+      // Create a FormData object to send the file
+      const formData = new FormData()
+      formData.append('file', file)
+
+      if (!skipUpload) {
+        const response = await fetch('/api/logs/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to upload log file')
+        }
+
+        const responseData = await response.json()
+        logFileId = responseData.id
+      }
+      // Upload the file to the server
+
+      // Get the file content
       const content = await file.text()
       const logLines = content.split('\n')
 
@@ -727,8 +852,10 @@ export default function LogParser() {
             lastEventTime ?? lastProcessedTimestamp ?? currentGame.startDate // Fallback chain
         }
         currentGame.durationSeconds = currentGame.endDate
-          ? (currentGame.endDate.getTime() - currentGame.startDate.getTime()) /
-            1000
+          ? (currentGame.endDate instanceof Date
+              ? currentGame.endDate.getTime()
+              : new Date(currentGame.endDate).getTime() -
+                currentGame.startDate.getTime()) / 1000
           : null
         games.push(currentGame)
       }
@@ -737,7 +864,26 @@ export default function LogParser() {
         setError('No games found in the log file.')
       }
 
-      setParsedGames(games)
+      // Send the parsed games to the server
+      if (!skipUpload) {
+        console.log('Sending parsed games to server...')
+        const uploadResponse = await fetch('/api/logs/upload', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            logFileId,
+            parsedGames: games,
+          }),
+        })
+
+        if (!uploadResponse.ok) {
+          console.error('Failed to save parsed games')
+        }
+      }
+
+      setParsedGames(convertDates(games))
     } catch (err) {
       console.error('Error parsing log:', err)
       setError(
@@ -842,16 +988,26 @@ export default function LogParser() {
                       </CardTitle>
                       <CardDescription>
                         Started:{' '}
-                        {formatter.dateTime(game.startDate, {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}{' '}
+                        {formatter.dateTime(
+                          game.startDate instanceof Date
+                            ? game.startDate
+                            : new Date(game.startDate),
+                          {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          }
+                        )}{' '}
                         | Ended:{' '}
                         {game.endDate
-                          ? formatter.dateTime(game.endDate, {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })
+                          ? formatter.dateTime(
+                              game.endDate instanceof Date
+                                ? game.endDate
+                                : new Date(game.endDate),
+                              {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              }
+                            )
                           : 'N/A'}{' '}
                         | Duration: {formatDuration(game.durationSeconds)}
                       </CardDescription>
@@ -966,9 +1122,14 @@ export default function LogParser() {
                                         <span
                                           className={`${event.text.includes('Opponent') ? 'ml-2' : 'mr-2'} font-mono`}
                                         >
-                                          {formatter.dateTime(event.timestamp, {
-                                            timeStyle: 'medium',
-                                          })}
+                                          {formatter.dateTime(
+                                            event.timestamp instanceof Date
+                                              ? event.timestamp
+                                              : new Date(event.timestamp),
+                                            {
+                                              timeStyle: 'medium',
+                                            }
+                                          )}
                                         </span>
                                         <span>{event.text}</span>
                                       </div>
