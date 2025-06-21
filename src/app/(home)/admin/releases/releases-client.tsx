@@ -19,6 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Dropzone,
+  DropzoneDescription,
+  DropzoneGroup,
+  DropzoneInput,
+  DropzoneTitle,
+  DropzoneUploadIcon,
+  DropzoneZone,
+} from '@/components/ui/dropzone'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -80,10 +89,77 @@ export function ReleasesClient() {
   const [smodsVersions, setSmodsVersions] = useState<string[]>(['latest'])
   const [lovelyVersions, setLovelyVersions] = useState<string[]>(['latest'])
   const [newBranch, setNewBranch] = useState<string>('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // Fetch branches from the database
   const [branches] = api.branches.getBranches.useSuspenseQuery()
   console.log(branches)
+
+  // Handle file upload
+  const [editIsUploading, setEditIsUploading] = useState(false)
+  const [editUploadError, setEditUploadError] = useState<string | null>(null)
+
+  const handleFileUpload = async (files: File[], isEdit = false) => {
+    if (files.length === 0) return
+
+    const file = files[0]
+    if (!file.name.endsWith('.zip')) {
+      toast.error('Only zip files are allowed')
+      return
+    }
+
+    if (isEdit) {
+      setEditIsUploading(true)
+      setEditUploadError(null)
+    } else {
+      setIsUploading(true)
+      setUploadError(null)
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload file')
+      }
+
+      const data = await response.json()
+
+      // Update the URL field in the form
+      if (isEdit) {
+        editForm.setValue('url', data.url)
+      } else {
+        form.setValue('url', data.url)
+      }
+      toast.success('File uploaded successfully')
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      if (isEdit) {
+        setEditUploadError(
+          error instanceof Error ? error.message : 'Failed to upload file'
+        )
+      } else {
+        setUploadError(
+          error instanceof Error ? error.message : 'Failed to upload file'
+        )
+      }
+      toast.error('Failed to upload file')
+    } finally {
+      if (isEdit) {
+        setEditIsUploading(false)
+      } else {
+        setIsUploading(false)
+      }
+    }
+  }
   // Add branch mutation
   const addBranch = api.branches.addBranch.useMutation({
     onSuccess: () => {
@@ -283,7 +359,51 @@ export function ReleasesClient() {
             </div>
             <div className='grid grid-cols-1 gap-2'>
               <Label htmlFor='url'>URL</Label>
-              <Input id='url' {...form.register('url')} />
+              <div className='flex flex-col gap-2'>
+                <Input
+                  id='url'
+                  {...form.register('url')}
+                  placeholder='URL will be automatically filled after upload'
+                />
+                <div className='rounded-md border'>
+                  <Dropzone
+                    onDropAccepted={(files) => handleFileUpload(files, false)}
+                    accept={{
+                      'application/zip': ['.zip'],
+                    }}
+                    maxFiles={1}
+                    disabled={isUploading}
+                  >
+                    <DropzoneZone className='w-full p-4'>
+                      <DropzoneInput />
+                      <DropzoneGroup className='gap-2'>
+                        {isUploading ? (
+                          <div className='flex items-center justify-center'>
+                            <div className='h-6 w-6 animate-spin rounded-full border-primary border-b-2' />
+                          </div>
+                        ) : (
+                          <DropzoneUploadIcon />
+                        )}
+                        <DropzoneGroup>
+                          <DropzoneTitle>
+                            {isUploading
+                              ? 'Uploading...'
+                              : 'Drop zip file here or click to upload'}
+                          </DropzoneTitle>
+                          <DropzoneDescription>
+                            Upload a zip archive to automatically generate a URL
+                          </DropzoneDescription>
+                          {uploadError && (
+                            <p className='mt-1 text-destructive text-sm'>
+                              {uploadError}
+                            </p>
+                          )}
+                        </DropzoneGroup>
+                      </DropzoneGroup>
+                    </DropzoneZone>
+                  </Dropzone>
+                </div>
+              </div>
             </div>
             <div className='grid grid-cols-3 gap-4'>
               <div className='grid grid-cols-1 gap-2'>
@@ -353,11 +473,11 @@ export function ReleasesClient() {
               </div>
             </div>
             <div className='grid grid-cols-1 gap-2'>
-              <div className='flex justify-between items-center'>
+              <div className='flex items-center justify-between'>
                 <Label htmlFor='branch-management'>Branch Management</Label>
-                <Button 
-                  type='button' 
-                  variant='outline' 
+                <Button
+                  type='button'
+                  variant='outline'
                   size='sm'
                   onClick={() => setBranchManagementOpen(true)}
                 >
@@ -404,7 +524,52 @@ export function ReleasesClient() {
               </div>
               <div className='grid grid-cols-1 gap-2'>
                 <Label htmlFor='edit-url'>URL</Label>
-                <Input id='edit-url' {...editForm.register('url')} />
+                <div className='flex flex-col gap-2'>
+                  <Input
+                    id='edit-url'
+                    {...editForm.register('url')}
+                    placeholder='URL will be automatically filled after upload'
+                  />
+                  <div className='rounded-md border'>
+                    <Dropzone
+                      onDropAccepted={(files) => handleFileUpload(files, true)}
+                      accept={{
+                        'application/zip': ['.zip'],
+                      }}
+                      maxFiles={1}
+                      disabled={editIsUploading}
+                    >
+                      <DropzoneZone className='w-full p-4'>
+                        <DropzoneInput />
+                        <DropzoneGroup className='gap-2'>
+                          {editIsUploading ? (
+                            <div className='flex items-center justify-center'>
+                              <div className='h-6 w-6 animate-spin rounded-full border-primary border-b-2'></div>
+                            </div>
+                          ) : (
+                            <DropzoneUploadIcon />
+                          )}
+                          <DropzoneGroup>
+                            <DropzoneTitle>
+                              {editIsUploading
+                                ? 'Uploading...'
+                                : 'Drop zip file here or click to upload'}
+                            </DropzoneTitle>
+                            <DropzoneDescription>
+                              Upload a zip archive to automatically generate a
+                              URL
+                            </DropzoneDescription>
+                            {editUploadError && (
+                              <p className='mt-1 text-destructive text-sm'>
+                                {editUploadError}
+                              </p>
+                            )}
+                          </DropzoneGroup>
+                        </DropzoneGroup>
+                      </DropzoneZone>
+                    </Dropzone>
+                  </div>
+                </div>
               </div>
               <div className='grid grid-cols-3 gap-4'>
                 <div className='grid grid-cols-1 gap-2'>
@@ -515,7 +680,10 @@ export function ReleasesClient() {
       </AlertDialog>
 
       {/* Branch Management Modal */}
-      <Dialog open={branchManagementOpen} onOpenChange={setBranchManagementOpen}>
+      <Dialog
+        open={branchManagementOpen}
+        onOpenChange={setBranchManagementOpen}
+      >
         <DialogContent className='sm:max-w-[500px]'>
           <DialogHeader>
             <DialogTitle>Manage Branches</DialogTitle>
@@ -581,7 +749,10 @@ export function ReleasesClient() {
             </div>
           </div>
           <DialogFooter>
-            <Button type='button' onClick={() => setBranchManagementOpen(false)}>
+            <Button
+              type='button'
+              onClick={() => setBranchManagementOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>

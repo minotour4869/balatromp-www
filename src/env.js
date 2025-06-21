@@ -18,6 +18,11 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     REDIS_URL: z.string().url(),
     WEBHOOK_QUERY_SECRET: z.string(),
+    MINIO_ENDPOINT: z.string(),
+    MINIO_ACCESS_KEY: z.string(),
+    MINIO_SECRET_KEY: z.string(),
+    MINIO_BUCKET_NAME: z.string(),
+    MINIO_USE_SSL: z.enum(['true', 'false']).default('false'),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
@@ -46,6 +51,11 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     CRON_SECRET: process.env.CRON_SECRET,
     WEBHOOK_QUERY_SECRET: process.env.WEBHOOK_QUERY_SECRET,
+    MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
+    MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
+    MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
+    MINIO_BUCKET_NAME: process.env.MINIO_BUCKET_NAME,
+    MINIO_USE_SSL: process.env.MINIO_USE_SSL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   /**
