@@ -3,6 +3,7 @@ import { discord_router } from '@/server/api/routers/discord'
 import { history_router } from '@/server/api/routers/history'
 import { leaderboard_router } from '@/server/api/routers/leaderboard'
 import { playerStateRouter } from '@/server/api/routers/player-state'
+import { profileRouter } from '@/server/api/routers/profile'
 import { releasesRouter } from '@/server/api/routers/releases'
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc'
 
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   discord: discord_router,
   leaderboard: leaderboard_router,
   playerState: playerStateRouter,
+  profile: profileRouter,
   releases: releasesRouter,
 })
 

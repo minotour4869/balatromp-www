@@ -1,12 +1,6 @@
 'use client'
 
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -32,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { auth } from '@/server/auth'
 import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
 import { api } from '@/trpc/react'
 import {
@@ -40,15 +35,16 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  EllipsisVertical,
   Filter,
   IceCreamCone,
   ShieldHalf,
   Star,
   Trophy,
+  Twitch,
   UserIcon,
+  Youtube,
 } from 'lucide-react'
-import { ExternalIcon } from 'next/dist/client/components/react-dev-overlay/ui/icons/external'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { isNonNullish } from 'remeda'
@@ -206,20 +202,6 @@ export function UserInfo() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {/*<DropdownMenu>*/}
-                {/*  <DropdownMenuTrigger asChild>*/}
-                {/*    <Button variant={'ghost'} size={'iconSm'}>*/}
-                {/*      <EllipsisVertical className={'size-4'} />*/}
-                {/*    </Button>*/}
-                {/*  </DropdownMenuTrigger>*/}
-                {/*  <DropdownMenuContent>*/}
-                {/*    <DropdownMenuItem asChild>*/}
-                {/*      <Link href={`/stream-card/${id}`} target={'_blank'}>*/}
-                {/*        Stream widget <ExternalIcon />*/}
-                {/*      </Link>*/}
-                {/*    </DropdownMenuItem>*/}
-                {/*  </DropdownMenuContent>*/}
-                {/*</DropdownMenu>*/}
               </div>
 
               <p className='pt-2 text-gray-500 text-sm dark:text-zinc-400'>
@@ -256,6 +238,38 @@ export function UserInfo() {
                         ? `#${vanillaUserRank.rank}`
                         : 'N/A'}
                     </span>
+                  </Badge>
+                )}
+                {discord_user.twitch_url && (
+                  <Badge
+                    variant='outline'
+                    className='border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800'
+                  >
+                    <Twitch className='mr-1 h-3 w-3 text-purple-500' />
+                    <a
+                      href={discord_user.twitch_url}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-gray-700 hover:underline dark:text-zinc-300'
+                    >
+                      Twitch
+                    </a>
+                  </Badge>
+                )}
+                {discord_user.youtube_url && (
+                  <Badge
+                    variant='outline'
+                    className='border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800'
+                  >
+                    <Youtube className='mr-1 h-3 w-3 text-red-500' />
+                    <a
+                      href={discord_user.youtube_url}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-gray-700 hover:underline dark:text-zinc-300'
+                    >
+                      YouTube
+                    </a>
                   </Badge>
                 )}
               </div>

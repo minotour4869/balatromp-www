@@ -13,7 +13,7 @@ import { ThemeToggle } from 'fumadocs-ui/components/layout/theme-toggle'
 import type { HomeLayoutProps } from 'fumadocs-ui/layouts/home'
 import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import { replaceOrDefault } from 'fumadocs-ui/layouts/shared'
-import { LogIn, LogOut, Tv, User } from 'lucide-react'
+import { LogIn, LogOut, Settings, Tv, User } from 'lucide-react'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Fragment } from 'react'
@@ -104,6 +104,15 @@ export function Header({
                 >
                   <User className='mr-2 h-4 w-4' />
                   <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href='/profile/settings'
+                  className='flex w-full items-center'
+                >
+                  <Settings className='mr-2 h-4 w-4' />
+                  <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
