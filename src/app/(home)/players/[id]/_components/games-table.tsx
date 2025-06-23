@@ -198,7 +198,7 @@ const useColumns = () => {
           ]
         : []),
     ],
-    [isAdmin]
+    [isAdmin, timeZone]
   )
 }
 

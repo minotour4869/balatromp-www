@@ -16,7 +16,6 @@ import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate
 import { TimeZoneProvider } from '@/components/timezone-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -26,7 +25,6 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { auth } from '@/server/auth'
 import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
 import { api } from '@/trpc/react'
 import {
@@ -44,20 +42,26 @@ import {
   UserIcon,
   Youtube,
 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import Link from 'next/link'
+import { useFormatter, useTimeZone } from 'next-intl'
 import { useParams } from 'next/navigation'
 import { isNonNullish } from 'remeda'
 
 const numberFormatter = new Intl.NumberFormat('en-US', {
   signDisplay: 'exceptZero',
 })
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  dateStyle: 'long',
-})
 
 export function UserInfo() {
+  return (
+    <TimeZoneProvider>
+      <UserInfoComponent />
+    </TimeZoneProvider>
+  )
+}
+
+function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
+  const format = useFormatter()
+  const timeZone = useTimeZone()
 
   const [leaderboardFilter, setLeaderboardFilter] = useState('all')
   const { id } = useParams()
@@ -206,7 +210,13 @@ export function UserInfo() {
 
               <p className='pt-2 text-gray-500 text-sm dark:text-zinc-400'>
                 {firstGame ? (
-                  <>First game: {dateFormatter.format(firstGame.gameTime)}</>
+                  <>
+                    First game:{' '}
+                    {format.dateTime(firstGame.gameTime, {
+                      dateStyle: 'long',
+                      timeZone,
+                    })}
+                  </>
                 ) : (
                   <>No games played yet</>
                 )}
@@ -442,9 +452,7 @@ export function UserInfo() {
           <TabsContent value='matches' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <TimeZoneProvider>
-                  <GamesTable games={filteredGames} />
-                </TimeZoneProvider>
+                <GamesTable games={filteredGames} />
               </div>
             </div>
           </TabsContent>
