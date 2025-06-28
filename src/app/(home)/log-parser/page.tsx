@@ -852,9 +852,9 @@ export default function LogParser() {
             lastEventTime ?? lastProcessedTimestamp ?? currentGame.startDate // Fallback chain
         }
         currentGame.durationSeconds = currentGame.endDate
-          ? (currentGame.endDate instanceof Date
+          ? ((currentGame.endDate instanceof Date
               ? currentGame.endDate.getTime()
-              : new Date(currentGame.endDate).getTime() -
+              : new Date(currentGame.endDate).getTime()) -
                 currentGame.startDate.getTime()) / 1000
           : null
         games.push(currentGame)
