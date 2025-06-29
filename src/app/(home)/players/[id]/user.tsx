@@ -357,7 +357,7 @@ function UserInfoComponent() {
             >
               <StatsCard
                 title='Games'
-                value={profileData.games}
+                value={profileData.meaningful_games}
                 icon={<BarChart3 className='h-5 w-5 text-violet-500' />}
                 description='Total matches'
               />
