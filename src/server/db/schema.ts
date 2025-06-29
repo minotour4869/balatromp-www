@@ -179,3 +179,13 @@ export const logFilesRelations = relations(logFiles, ({ one }) => ({
     references: [users.id],
   }),
 }))
+
+export const leaderboardSnapshots = pgTable('leaderboard_snapshots', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  channelId: text('channel_id').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  data: json('data').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const leaderboardSnapshotsRelations = relations(leaderboardSnapshots, ({}) => ({}))

@@ -1,12 +1,19 @@
 import { redis } from '../redis'
 import { type LeaderboardEntry, neatqueue_service } from './neatqueue.service'
 import { db } from '@/server/db'
-import { metadata } from '@/server/db/schema'
-import { eq } from 'drizzle-orm'
+import { leaderboardSnapshots, metadata } from '@/server/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
   isStale: boolean
+}
+
+export type LeaderboardSnapshotResponse = {
+  data: LeaderboardEntry[]
+  timestamp: string
+  channel_id: string
 }
 
 export type UserRankResponse = {
@@ -31,12 +38,22 @@ export class LeaderboardService {
     return `backup_leaderboard_${channel_id}`
   }
 
+  private getSnapshotKey(channel_id: string, timestamp: string): string {
+    return `snapshot_leaderboard_${channel_id}_${timestamp}`
+  }
+
+  private getSnapshotPrefix(channel_id: string): string {
+    return `snapshot_leaderboard_${channel_id}_`
+  }
+
   async refreshLeaderboard(channel_id: string): Promise<LeaderboardResponse> {
     try {
       const fresh = await neatqueue_service.get_leaderboard(channel_id)
       const zsetKey = this.getZSetKey(channel_id)
       const rawKey = this.getRawKey(channel_id)
       const backupKey = this.getBackupKey(channel_id)
+      const timestamp = new Date().toISOString()
+      const snapshotKey = this.getSnapshotKey(channel_id, timestamp.replace(/[:.]/g, '_'))
 
       const pipeline = redis.pipeline()
       pipeline.setex(rawKey, 180, JSON.stringify(fresh))
@@ -53,14 +70,35 @@ export class LeaderboardService {
       pipeline.expire(zsetKey, 180)
       await pipeline.exec()
 
-      // Store the latest successful leaderboard data in the database
+      // Store the snapshot in the dedicated leaderboardSnapshots table
+      await db
+        .insert(leaderboardSnapshots)
+        .values({
+          channelId: channel_id,
+          timestamp: new Date(timestamp),
+          data: fresh,
+        })
+
+      // Also store the snapshot with a unique timestamp-based key in metadata for backward compatibility
+      await db
+        .insert(metadata)
+        .values({
+          key: snapshotKey,
+          value: JSON.stringify({
+            data: fresh,
+            timestamp,
+            channel_id,
+          }),
+        })
+
+      // Also store/update the latest successful leaderboard data for backward compatibility
       await db
         .insert(metadata)
         .values({
           key: backupKey,
           value: JSON.stringify({
             data: fresh,
-            timestamp: new Date().toISOString(),
+            timestamp,
           }),
         })
         .onConflictDoUpdate({
@@ -68,7 +106,7 @@ export class LeaderboardService {
           set: {
             value: JSON.stringify({
               data: fresh,
-              timestamp: new Date().toISOString(),
+              timestamp,
             }),
           },
         })
@@ -127,6 +165,64 @@ export class LeaderboardService {
       // If no backup exists, return an empty array with isStale flag
       console.log('No backup leaderboard data available for getLeaderboard, returning empty array')
       return { data: [], isStale: true }
+    }
+  }
+
+  /**
+   * Get historical leaderboard snapshots for a channel
+   * @param channel_id The channel ID
+   * @param limit Optional limit on the number of snapshots to return (default: 100)
+   * @returns Array of leaderboard snapshots
+   */
+  async getLeaderboardSnapshots(
+    channel_id: string,
+    limit: number = 100
+  ): Promise<LeaderboardSnapshotResponse[]> {
+    try {
+      // Query the dedicated leaderboardSnapshots table
+      const snapshots = await db
+        .select()
+        .from(leaderboardSnapshots)
+        .where(eq(leaderboardSnapshots.channelId, channel_id))
+        .orderBy(desc(leaderboardSnapshots.timestamp)) // Most recent first
+        .limit(limit)
+
+      // Map the snapshots to the expected response format
+      return snapshots.map((snapshot) => {
+        return {
+          data: snapshot.data as LeaderboardEntry[],
+          timestamp: snapshot.timestamp.toISOString(),
+          channel_id: snapshot.channelId,
+        }
+      })
+    } catch (error) {
+      console.error('Error getting leaderboard snapshots from dedicated table:', error)
+
+      try {
+        // Fallback to the old metadata table approach if the new table query fails
+        const prefix = this.getSnapshotPrefix(channel_id)
+
+        // Query the database for all entries with keys that start with the snapshot prefix
+        const oldSnapshots = await db
+          .select()
+          .from(metadata)
+          .where(sql`${metadata.key} LIKE ${prefix + '%'}`)
+          .orderBy(sql`${metadata.key} DESC`) // Most recent first
+          .limit(limit)
+
+        // Parse the snapshots
+        return oldSnapshots.map((snapshot) => {
+          const parsedValue = JSON.parse(snapshot.value)
+          return {
+            data: parsedValue.data as LeaderboardEntry[],
+            timestamp: parsedValue.timestamp,
+            channel_id: parsedValue.channel_id,
+          }
+        })
+      } catch (fallbackError) {
+        console.error('Error getting leaderboard snapshots from metadata fallback:', fallbackError)
+        return []
+      }
     }
   }
 
