@@ -189,7 +189,8 @@ function UserInfoComponent() {
       meaningful_games > 0 ? Math.floor((losses / meaningful_games) * 100) : 0,
   }
 
-  const firstGame = seasonFilteredGames.at(-1)
+  // Get the overall first game (not filtered by season)
+  const overallFirstGame = games.at(-1)
 
   // Get last games for each leaderboard
   const lastRankedGame = seasonFilteredGames
@@ -251,10 +252,10 @@ function UserInfoComponent() {
               </div>
 
               <p className='pt-2 text-gray-500 text-sm dark:text-zinc-400'>
-                {firstGame ? (
+                {overallFirstGame ? (
                   <>
                     First game:{' '}
-                    {format.dateTime(firstGame.gameTime, {
+                    {format.dateTime(overallFirstGame.gameTime, {
                       dateStyle: 'long',
                       timeZone,
                     })}
