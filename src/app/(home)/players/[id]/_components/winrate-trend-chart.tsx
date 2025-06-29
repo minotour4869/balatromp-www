@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/chart'
 import { Slider } from '@/components/ui/slider'
 import type { SelectGames } from '@/server/db/types'
+import { type Season, filterGamesBySeason, getSeasonDisplayName } from '@/shared/seasons'
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
@@ -25,11 +26,20 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function WinrateTrendChart({ games }: { games: SelectGames[] }) {
+export function WinrateTrendChart({ 
+  games, 
+  season = 'all' 
+}: { 
+  games: SelectGames[],
+  season?: Season 
+}) {
   const [gamesWindow, setGamesWindow] = useState(30)
 
+  // Filter games by season if a specific season is selected
+  const seasonFilteredGames = filterGamesBySeason(games, season)
+
   // Sort games by date (oldest to newest)
-  const sortedGames = [...games]
+  const sortedGames = [...seasonFilteredGames]
     .sort((a, b) => a.gameTime.getTime() - b.gameTime.getTime())
     .filter((game) => game.result === 'win' || game.result === 'loss')
 
@@ -41,7 +51,7 @@ export function WinrateTrendChart({ games }: { games: SelectGames[] }) {
       <CardHeader className='flex flex-row items-center justify-between'>
         <div>
           <CardTitle>Winrate Trends</CardTitle>
-          <CardDescription>Rolling winrate over time</CardDescription>
+          <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
         </div>
         <div className='flex w-[200px] flex-col gap-2'>
           <div className='flex items-center justify-between'>

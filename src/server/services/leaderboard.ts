@@ -4,6 +4,8 @@ import { db } from '@/server/db'
 import { leaderboardSnapshots, metadata } from '@/server/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
+import fs from 'fs'
+import path from 'path'
 
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
@@ -22,8 +24,74 @@ export type UserRankResponse = {
 } | null
 
 export class LeaderboardService {
+  private season2DataCache: Map<string, LeaderboardEntry[]> = new Map()
+
   private getZSetKey(channel_id: string) {
     return `zset:leaderboard:${channel_id}`
+  }
+
+  // Load Season 2 data from the snapshot file
+  private loadSeason2Data(channel_id: string): LeaderboardEntry[] {
+    // Check if data is already cached
+    if (this.season2DataCache.has(channel_id)) {
+      return this.season2DataCache.get(channel_id)!
+    }
+
+    try {
+      // Path to the Season 2 snapshot file
+      const filePath = path.join(process.cwd(), 'src', 'data', 'leaderboard-snapshot-eos2.json')
+
+      // Read and parse the file
+      const fileContent = fs.readFileSync(filePath, 'utf-8')
+      const data = JSON.parse(fileContent)
+
+      // Extract and format the leaderboard entries
+      const entries = data.alltime.map((entry: any) => ({
+        id: entry.id,
+        name: entry.name,
+        mmr: entry.data.mmr,
+        wins: entry.data.wins,
+        losses: entry.data.losses,
+        streak: entry.data.streak,
+        totalgames: entry.data.totalgames,
+        peak_mmr: entry.data.peak_mmr,
+        peak_streak: entry.data.peak_streak,
+        rank: entry.data.rank,
+        winrate: entry.data.winrate,
+      }))
+
+      // Cache the data for future requests
+      this.season2DataCache.set(channel_id, entries)
+
+      return entries
+    } catch (error) {
+      console.error('Error loading Season 2 data:', error)
+      return []
+    }
+  }
+
+  // Get Season 2 leaderboard data
+  async getSeason2Leaderboard(channel_id: string): Promise<LeaderboardEntry[]> {
+    const entries = this.loadSeason2Data(channel_id)
+
+    // Sort entries by MMR in descending order
+    const sortedEntries = [...entries].sort((a, b) => b.mmr - a.mmr)
+
+    // Recalculate ranks based on sorted order
+    return sortedEntries.map((entry, idx) => ({
+      ...entry,
+      rank: idx + 1
+    }))
+  }
+
+  // Get Season 2 user rank data
+  async getSeason2UserRank(channel_id: string, user_id: string): Promise<LeaderboardEntry | null> {
+    // Get the sorted leaderboard with recalculated ranks
+    const sortedLeaderboard = await this.getSeason2Leaderboard(channel_id)
+
+    // Find the user entry in the sorted leaderboard
+    const userEntry = sortedLeaderboard.find(entry => entry.id === user_id)
+    return userEntry || null
   }
 
   private getRawKey(channel_id: string) {

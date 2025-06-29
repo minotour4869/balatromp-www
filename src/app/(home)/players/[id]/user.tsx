@@ -26,11 +26,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import {
+  type Season,
+  filterGamesBySeason,
+  getSeasonDisplayName,
+} from '@/shared/seasons'
 import { api } from '@/trpc/react'
 import {
   ArrowDownCircle,
   ArrowUpCircle,
   BarChart3,
+  Calendar,
   ChevronDown,
   ChevronUp,
   Filter,
@@ -62,6 +68,7 @@ function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
   const timeZone = useTimeZone()
+  const [season, setSeason] = useState<Season>('season3')
 
   const [leaderboardFilter, setLeaderboardFilter] = useState('all')
   const { id } = useParams()
@@ -74,29 +81,61 @@ function UserInfoComponent() {
     user_id: id,
   })
 
+  // Fetch current season data
   const [rankedLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery({
     channel_id: RANKED_CHANNEL,
+    season,
   })
 
   const [vanillaLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery(
     {
       channel_id: VANILLA_CHANNEL,
+      season,
     }
   )
+
+  // Fetch current season user rank
   const [vanillaUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
     channel_id: VANILLA_CHANNEL,
     user_id: id,
+    season,
   })
   const [rankedUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
     channel_id: RANKED_CHANNEL,
     user_id: id,
+    season,
+  })
+
+  // Fetch Season 2 data for historic comparison
+  const [rankedUserRankS2Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
+    channel_id: RANKED_CHANNEL,
+    user_id: id,
+    season: 'season2',
+  })
+
+  // Fetch Season 3 data for historic comparison
+  const [rankedUserRankS3Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
+    channel_id: RANKED_CHANNEL,
+    user_id: id,
+    season: 'season3',
   })
   const rankedUserRank = rankedUserRankQ?.data
   const vanillaUserRank = vanillaUserRankQ?.data
+
+  // Extract historic data
+  const rankedUserRankS2 = rankedUserRankS2Q?.data
+  const rankedUserRankS3 = rankedUserRankS3Q?.data
+
+  // Determine which historic data to show (opposite of current season)
+  const historicRankedData =
+    season === 'season2' ? rankedUserRankS3 : rankedUserRankS2
+  // Filter games by season
+  const seasonFilteredGames = filterGamesBySeason(games, season)
+
   const filteredGamesByLeaderboard =
     leaderboardFilter === 'all'
-      ? games
-      : games.filter(
+      ? seasonFilteredGames
+      : seasonFilteredGames.filter(
           (game) =>
             game.gameType.toLowerCase() === leaderboardFilter?.toLowerCase()
         )
@@ -115,11 +154,11 @@ function UserInfoComponent() {
               )
             : filteredGamesByLeaderboard.filter((game) => game.result === 'tie')
 
-  const games_played = games.length
+  const games_played = seasonFilteredGames.length
   let wins = 0
   let losses = 0
   let ties = 0
-  for (const game of games) {
+  for (const game of seasonFilteredGames) {
     if (game.result === 'win') {
       wins++
     } else if (game.result === 'loss') {
@@ -131,8 +170,8 @@ function UserInfoComponent() {
     }
   }
 
-  const aliases = [...new Set(games.map((g) => g.playerName))]
-  const lastGame = games.at(0)
+  const aliases = [...new Set(seasonFilteredGames.map((g) => g.playerName))]
+  const lastGame = seasonFilteredGames.at(0)
 
   const currentName = lastGame?.playerName ?? discord_user.username
   const meaningful_games = games_played - ties
@@ -150,24 +189,27 @@ function UserInfoComponent() {
       meaningful_games > 0 ? Math.floor((losses / meaningful_games) * 100) : 0,
   }
 
-  const firstGame = games.at(-1)
+  const firstGame = seasonFilteredGames.at(-1)
 
   // Get last games for each leaderboard
-  const lastRankedGame = games
+  const lastRankedGame = seasonFilteredGames
     .filter((game) => game.gameType === 'ranked')
     .at(0)
-  const lastVanillaGame = games
+  const lastVanillaGame = seasonFilteredGames
     .filter((game) => game.gameType.toLowerCase() === 'vanilla')
     .at(0)
+
+  // Calculate average opponent MMR for meaningful games
+  const rankedMeaningfulGames = seasonFilteredGames.filter(
+    (g) =>
+      g.result !== 'tie' && g.result !== 'unknown' && g.gameType === 'ranked'
+  )
+
   const avgOpponentMmr =
-    games
-      .filter(
-        (g) =>
-          g.result !== 'tie' &&
-          g.result !== 'unknown' &&
-          g.gameType === 'ranked'
-      )
-      .reduce((acc, g) => acc + g.opponentMmr, 0) / meaningful_games
+    rankedMeaningfulGames.length > 0
+      ? rankedMeaningfulGames.reduce((acc, g) => acc + g.opponentMmr, 0) /
+        rankedMeaningfulGames.length
+      : 0
   return (
     <div className='flex flex-1 flex-col overflow-hidden'>
       <div className='mx-auto flex w-[calc(100%-1rem)] max-w-fd-container flex-1 flex-col'>
@@ -233,6 +275,25 @@ function UserInfoComponent() {
                       {isNonNullish(rankedUserRank?.rank)
                         ? `#${rankedUserRank.rank}`
                         : 'N/A'}
+                    </span>
+                  </Badge>
+                )}
+
+                {/* Show historic rank data if available */}
+                {historicRankedData && season !== 'all' && (
+                  <Badge
+                    variant='outline'
+                    className='border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  >
+                    <Calendar className='mr-1 h-3 w-3' />
+                    <span>
+                      {season === 'season3' ? 'Season 2' : 'Season 3'} Rank:{' '}
+                      {isNonNullish(historicRankedData.rank)
+                        ? `#${historicRankedData.rank}`
+                        : 'N/A'}
+                      {isNonNullish(historicRankedData.mmr)
+                        ? ` (${Math.round(historicRankedData.mmr)} MMR)`
+                        : ''}
                     </span>
                   </Badge>
                 )}
@@ -413,7 +474,7 @@ function UserInfoComponent() {
               <TabsTrigger value='achievements'>Achievements</TabsTrigger>
             </TabsList>
 
-            <div className='flex items-center gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
               <div className='mr-2 flex items-center gap-2'>
                 <Trophy className='h-4 w-4 text-gray-400 dark:text-zinc-400' />
                 <Select
@@ -427,6 +488,29 @@ function UserInfoComponent() {
                     <SelectItem value='all'>All Leaderboards</SelectItem>
                     <SelectItem value='ranked'>Ranked</SelectItem>
                     <SelectItem value='vanilla'>Vanilla</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='mr-2 flex items-center gap-2'>
+                <Calendar className='h-4 w-4 text-gray-400 dark:text-zinc-400' />
+                <Select
+                  value={season}
+                  onValueChange={(value) => setSeason(value as Season)}
+                >
+                  <SelectTrigger className='h-9 w-[180px]'>
+                    <SelectValue placeholder='Season' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='season3'>
+                      {getSeasonDisplayName('season3')}
+                    </SelectItem>
+                    <SelectItem value='season2'>
+                      {getSeasonDisplayName('season2')}
+                    </SelectItem>
+                    <SelectItem value='all'>
+                      {getSeasonDisplayName('all')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -466,14 +550,14 @@ function UserInfoComponent() {
           <TabsContent value='mmr-trends' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <MmrTrendChart games={games} />
+                <MmrTrendChart games={games} season={season} />
               </div>
             </div>
           </TabsContent>
           <TabsContent value='winrate-trends' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <WinrateTrendChart games={games} />
+                <WinrateTrendChart games={games} season={season} />
               </div>
             </div>
           </TabsContent>

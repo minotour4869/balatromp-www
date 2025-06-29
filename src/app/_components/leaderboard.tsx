@@ -22,6 +22,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/mobile-tooltip'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import {
   Table,
@@ -34,6 +41,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import {
+  type Season,
+  SeasonSchema,
+  getSeasonDisplayName,
+} from '@/shared/seasons'
 import { api } from '@/trpc/react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
@@ -41,11 +53,8 @@ import {
   ArrowUp,
   ArrowUpDown,
   Flame,
-  Medal,
   Search,
   TrendingUp,
-  Trophy,
-  Users,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -124,22 +133,45 @@ export function LeaderboardPage() {
   const searchParams = useSearchParams()
   // Get the leaderboard type from URL or default to 'ranked'
   const leaderboardType = searchParams.get('type') || 'ranked'
+  // Get the season from URL or default to 'season3'
+  const seasonParam = searchParams.get('season') as Season | null
+  const season =
+    seasonParam && SeasonSchema.safeParse(seasonParam).success
+      ? seasonParam
+      : 'season3'
   const [gamesAmount, setGamesAmount] = useState([0, 100])
 
   // State for search and sorting
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortColumn, setSortColumn] = useState('rank')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortColumn, setSortColumn] = useState(
+    season === 'season2' ? 'mmr' : 'rank'
+  )
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
+    season === 'season2' ? 'desc' : 'asc'
+  )
+
+  // Update sort settings when season changes
+  useEffect(() => {
+    if (season === 'season2') {
+      setSortColumn('mmr')
+      setSortDirection('desc')
+    } else {
+      setSortColumn('rank')
+      setSortDirection('asc')
+    }
+  }, [season])
 
   // Fetch leaderboard data
   const [rankedLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
       channel_id: RANKED_CHANNEL,
+      season,
     })
 
   const [vanillaLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
       channel_id: VANILLA_CHANNEL,
+      season,
     })
 
   // Get the current leaderboard based on selected tab
@@ -176,6 +208,13 @@ export function LeaderboardPage() {
     const params = new URLSearchParams(searchParams)
     setGamesAmount([0, maxGamesAmount])
     params.set('type', value)
+    router.push(`?${params.toString()}`)
+  }
+
+  // Handle season change
+  const handleSeasonChange = (value: Season) => {
+    const params = new URLSearchParams(searchParams)
+    params.set('season', value)
     router.push(`?${params.toString()}`)
   }
 
@@ -261,10 +300,36 @@ export function LeaderboardPage() {
             className='flex flex-1 flex-col px-0 py-4 md:py-6'
           >
             <div className='mb-6 flex w-full flex-col items-start justify-between gap-4 md:items-center lg:flex-row'>
-              <TabsList className='border border-gray-200 border-b bg-gray-50 dark:border-zinc-800 dark:bg-zinc-800/50'>
-                <TabsTrigger value='ranked'>Ranked Leaderboard</TabsTrigger>
-                <TabsTrigger value='vanilla'>Vanilla Leaderboard</TabsTrigger>
-              </TabsList>
+              <div className='flex flex-col gap-4 md:flex-row md:items-center'>
+                <TabsList className='border border-gray-200 border-b bg-gray-50 dark:border-zinc-800 dark:bg-zinc-800/50'>
+                  <TabsTrigger value='ranked'>Ranked Leaderboard</TabsTrigger>
+                  <TabsTrigger value='vanilla'>Vanilla Leaderboard</TabsTrigger>
+                </TabsList>
+
+                <div className='flex items-center gap-2'>
+                  <Label htmlFor='season-select' className='text-sm'>
+                    Season:
+                  </Label>
+                  <Select
+                    value={season}
+                    onValueChange={(value) =>
+                      handleSeasonChange(value as Season)
+                    }
+                  >
+                    <SelectTrigger id='season-select' className='w-[180px]'>
+                      <SelectValue placeholder='Select season' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='season3'>
+                        {getSeasonDisplayName('season3')}
+                      </SelectItem>
+                      <SelectItem value='season2'>
+                        {getSeasonDisplayName('season2')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div
                 className={
                   'flex w-full flex-col items-center justify-end gap-2 lg:w-fit lg:flex-row lg:gap-4'

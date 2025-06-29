@@ -14,6 +14,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import type { SelectGames } from '@/server/db/types'
+import { type Season, filterGamesBySeason, getSeasonDisplayName } from '@/shared/seasons'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 const chartConfig = {
@@ -23,8 +24,17 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function MmrTrendChart({ games }: { games: SelectGames[] }) {
-  const chartData = games
+export function MmrTrendChart({ 
+  games, 
+  season = 'all' 
+}: { 
+  games: SelectGames[],
+  season?: Season 
+}) {
+  // Filter games by season if a specific season is selected
+  const seasonFilteredGames = filterGamesBySeason(games, season)
+
+  const chartData = seasonFilteredGames
     .filter((game) => game.gameType === 'ranked')
     .map((game) => ({
       date: game.gameTime,
@@ -44,7 +54,7 @@ export function MmrTrendChart({ games }: { games: SelectGames[] }) {
     <Card>
       <CardHeader>
         <CardTitle>MMR Trends</CardTitle>
-        <CardDescription>All time</CardDescription>
+        <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
       </CardHeader>
       <CardContent className={'p-2'}>
         <ChartContainer config={chartConfig}>
