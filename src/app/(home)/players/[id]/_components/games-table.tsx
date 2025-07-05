@@ -198,15 +198,16 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
   >(null)
 
   // Use the tRPC useQuery hook to fetch the transcript
-  const { data: transcriptContent, isLoading } = api.history.getTranscript.useQuery(
-    { gameNumber: transcriptGameNumber ?? 0 },
-    {
-      // Only fetch when we have a game number and the dialog is open
-      enabled: transcriptGameNumber !== null && isDialogOpen,
-      // Don't refetch on window focus
-      refetchOnWindowFocus: false,
-    }
-  )
+  const { data: transcriptContent, isLoading } =
+    api.history.getTranscript.useQuery(
+      { gameNumber: transcriptGameNumber ?? 0 },
+      {
+        // Only fetch when we have a game number and the dialog is open
+        enabled: transcriptGameNumber !== null && isDialogOpen,
+        // Don't refetch on window focus
+        refetchOnWindowFocus: false,
+      }
+    )
 
   // New openTranscript function that sets state instead of opening a new window
   const openTranscript = (gameNumber: number): void => {
@@ -299,18 +300,31 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className='max-h-[80vh] w-full overflow-y-auto sm:max-w-[calc(100%-2rem)] '>
           <DialogHeader>
-            <DialogTitle>
-              {transcriptGameNumber
-                ? `Game Transcript #${transcriptGameNumber}`
-                : 'Game Transcript'}
-            </DialogTitle>
+            <div className='flex items-center justify-between'>
+              <DialogTitle>
+                {transcriptGameNumber
+                  ? `Game Transcript #${transcriptGameNumber}`
+                  : 'Game Transcript'}
+              </DialogTitle>
+              {transcriptGameNumber && (
+                <Button variant='outline' size='sm' asChild>
+                  <Link
+                    href={`/transcript/${transcriptGameNumber}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    Open in New Page
+                  </Link>
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           {/* Use iframe to isolate the transcript content and prevent style leakage */}
           <div className='!h-[60vh] mt-4 w-full'>
             {isLoading ? (
               <div className='flex h-full w-full items-center justify-center'>
                 <div className='text-center'>
-                  <div className='mb-2 h-6 w-6 animate-spin rounded-full border-b-2 border-t-2 border-gray-900 dark:border-gray-100'></div>
+                  <div className='mb-2 h-6 w-6 animate-spin rounded-full border-gray-900 border-t-2 border-b-2 dark:border-gray-100'></div>
                   <p>Loading transcript...</p>
                 </div>
               </div>
