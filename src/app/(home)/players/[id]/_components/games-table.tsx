@@ -307,7 +307,7 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
                   : 'Game Transcript'}
               </DialogTitle>
               {transcriptGameNumber && (
-                <Button variant='outline' size='sm' asChild>
+                <Button variant='outline' size='sm' asChild className={'mr-10'}>
                   <Link
                     href={`/transcript/${transcriptGameNumber}`}
                     target='_blank'
