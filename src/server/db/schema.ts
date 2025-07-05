@@ -189,3 +189,10 @@ export const leaderboardSnapshots = pgTable('leaderboard_snapshots', {
 })
 
 export const leaderboardSnapshotsRelations = relations(leaderboardSnapshots, ({}) => ({}))
+
+export const transcripts = pgTable('transcripts', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  gameNumber: integer('game_number').notNull().unique(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})

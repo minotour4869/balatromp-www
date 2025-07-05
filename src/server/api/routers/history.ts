@@ -5,8 +5,18 @@ import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
+import { neatqueue_service } from '@/server/services/neatqueue.service'
 
 export const history_router = createTRPCRouter({
+  getTranscript: publicProcedure
+    .input(
+      z.object({
+        gameNumber: z.number(),
+      })
+    )
+    .query(async ({ input }) => {
+      return await neatqueue_service.get_transcript(input.gameNumber);
+    }),
   games_per_hour: publicProcedure
     .input(
       z

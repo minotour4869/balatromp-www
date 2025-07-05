@@ -1,4 +1,8 @@
 import ky from 'ky'
+import { db } from '../db'
+import { redis } from '../redis'
+import { transcripts } from '../db/schema'
+import { eq } from 'drizzle-orm'
 
 const NEATQUEUE_URL = 'https://api.neatqueue.com/api'
 
@@ -8,6 +12,9 @@ const instance = ky.create({
 })
 
 const BMM_SERVER_ID = '1226193436521267223'
+
+// Redis key for transcript cache
+export const TRANSCRIPT_CACHE_KEY = (gameNumber: number) => `transcript:${gameNumber}`
 
 export const neatqueue_service = {
   get_leaderboard: async (channel_id: string) => {
@@ -43,6 +50,52 @@ export const neatqueue_service = {
       })
       .json()
     return response
+  },
+  get_transcript: async (gameNumber: number, server_id: string = BMM_SERVER_ID) => {
+    // Try to get from Redis cache first (fastest)
+    const cacheKey = TRANSCRIPT_CACHE_KEY(gameNumber)
+    const cachedTranscript = await redis.get(cacheKey)
+
+    if (cachedTranscript) {
+      console.log(`Transcript #${gameNumber} found in Redis cache`)
+      return cachedTranscript
+    }
+
+    // If not in Redis, try to get from database
+    const dbTranscript = await db.query.transcripts.findFirst({
+      where: eq(transcripts.gameNumber, gameNumber)
+    })
+
+    if (dbTranscript) {
+      console.log(`Transcript #${gameNumber} found in database`)
+      // Store in Redis for future quick access
+      await redis.set(cacheKey, dbTranscript.content)
+      return dbTranscript.content
+    }
+
+    // If not in database, fetch from neatqueue
+    console.log(`Fetching transcript #${gameNumber} from neatqueue`)
+    try {
+      const response = await instance
+        .get(`transcript/${server_id}/${gameNumber}`)
+        .json<string>()
+
+      // Store in both database and Redis
+      await db.insert(transcripts).values({
+        gameNumber,
+        content: response
+      }).onConflictDoUpdate({
+        target: transcripts.gameNumber,
+        set: { content: response }
+      })
+
+      await redis.set(cacheKey, response)
+
+      return response
+    } catch (error) {
+      console.error(`Error fetching transcript #${gameNumber}:`, error)
+      throw error
+    }
   },
 }
 export type Data = {

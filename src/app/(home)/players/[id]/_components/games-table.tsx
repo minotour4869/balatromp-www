@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import type { SelectGames } from '@/server/db/types'
+import { api } from '@/trpc/react'
 import {
   type SortingState,
   createColumnHelper,
@@ -42,11 +43,6 @@ const numberFormatter = new Intl.NumberFormat('en-US', {
 })
 
 const columnHelper = createColumnHelper<SelectGames>()
-function getTranscript(gameNumber: number) {
-  return fetch(
-    `https://api.neatqueue.com/api/transcript/1226193436521267223/${gameNumber}`
-  ).then((res) => res.json())
-}
 // This function is now moved inside the GamesTable component
 const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
   const format = useFormatter()
@@ -197,22 +193,25 @@ const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
 export function GamesTable({ games }: { games: SelectGames[] }) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [transcriptContent, setTranscriptContent] = useState<string>('')
   const [transcriptGameNumber, setTranscriptGameNumber] = useState<
     number | null
   >(null)
 
+  // Use the tRPC useQuery hook to fetch the transcript
+  const { data: transcriptContent, isLoading } = api.history.getTranscript.useQuery(
+    { gameNumber: transcriptGameNumber ?? 0 },
+    {
+      // Only fetch when we have a game number and the dialog is open
+      enabled: transcriptGameNumber !== null && isDialogOpen,
+      // Don't refetch on window focus
+      refetchOnWindowFocus: false,
+    }
+  )
+
   // New openTranscript function that sets state instead of opening a new window
   const openTranscript = (gameNumber: number): void => {
     setTranscriptGameNumber(gameNumber)
-    getTranscript(gameNumber)
-      .then((html: string) => {
-        setTranscriptContent(html)
-        setIsDialogOpen(true)
-      })
-      .catch((err) => {
-        console.error('Failed to load transcript:', err)
-      })
+    setIsDialogOpen(true)
   }
 
   // Pass the openTranscript function to useColumns
@@ -308,12 +307,25 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
           </DialogHeader>
           {/* Use iframe to isolate the transcript content and prevent style leakage */}
           <div className='!h-[60vh] mt-4 w-full'>
-            <iframe
-              srcDoc={transcriptContent}
-              title={`Game Transcript #${transcriptGameNumber || ''}`}
-              className='h-full w-full border-0'
-              sandbox='allow-same-origin'
-            />
+            {isLoading ? (
+              <div className='flex h-full w-full items-center justify-center'>
+                <div className='text-center'>
+                  <div className='mb-2 h-6 w-6 animate-spin rounded-full border-b-2 border-t-2 border-gray-900 dark:border-gray-100'></div>
+                  <p>Loading transcript...</p>
+                </div>
+              </div>
+            ) : transcriptContent ? (
+              <iframe
+                srcDoc={transcriptContent}
+                title={`Game Transcript #${transcriptGameNumber || ''}`}
+                className='h-full w-full border-0'
+                sandbox='allow-same-origin'
+              />
+            ) : (
+              <div className='flex h-full w-full items-center justify-center'>
+                <p>Failed to load transcript. Please try again.</p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
