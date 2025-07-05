@@ -3,6 +3,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -41,24 +47,8 @@ function getTranscript(gameNumber: number) {
     `https://api.neatqueue.com/api/transcript/1226193436521267223/${gameNumber}`
   ).then((res) => res.json())
 }
-function openTranscript(gameNumber: number): void {
-  getTranscript(gameNumber)
-    .then((html: string) => {
-      const newWindow = window.open('', '_blank')
-      if (newWindow) {
-        newWindow.document.write(html)
-        newWindow.document.close()
-      } else {
-        console.error(
-          'Failed to open new window - popup blocker may be enabled'
-        )
-      }
-    })
-    .catch((err) => {
-      console.error('Failed to load transcript:', err)
-    })
-}
-const useColumns = () => {
+// This function is now moved inside the GamesTable component
+const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
   const format = useFormatter()
   const timeZone = useTimeZone()
   const session = useSession()
@@ -186,7 +176,9 @@ const useColumns = () => {
               cell: (info) => (
                 <Button
                   size={'sm'}
-                  onClick={() => openTranscript(info.getValue())}
+                  onClick={() =>
+                    openTranscriptFn ? openTranscriptFn(info.getValue()) : null
+                  }
                   type={'button'}
                   variant={'ghost'}
                 >
@@ -204,7 +196,28 @@ const useColumns = () => {
 
 export function GamesTable({ games }: { games: SelectGames[] }) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const columns = useColumns()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [transcriptContent, setTranscriptContent] = useState<string>('')
+  const [transcriptGameNumber, setTranscriptGameNumber] = useState<
+    number | null
+  >(null)
+
+  // New openTranscript function that sets state instead of opening a new window
+  const openTranscript = (gameNumber: number): void => {
+    setTranscriptGameNumber(gameNumber)
+    getTranscript(gameNumber)
+      .then((html: string) => {
+        setTranscriptContent(html)
+        setIsDialogOpen(true)
+      })
+      .catch((err) => {
+        console.error('Failed to load transcript:', err)
+      })
+  }
+
+  // Pass the openTranscript function to useColumns
+  const columns = useColumns(openTranscript)
+
   const table = useReactTable({
     data: games,
     columns,
@@ -218,68 +231,92 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
   })
 
   return (
-    <div className='rounded-md border'>
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const sortDirection = header.column.getIsSorted()
-                return (
-                  <TableHead key={header.id} className={'px-0'}>
-                    <span
-                      className={cn(
-                        'flex w-full items-center',
-                        (header.column.columnDef.meta as any)?.className
-                      )}
-                    >
-                      <Button
+    <>
+      <div className='rounded-md border'>
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const sortDirection = header.column.getIsSorted()
+                  return (
+                    <TableHead key={header.id} className={'px-0'}>
+                      <span
                         className={cn(
-                          header.column.getCanSort() &&
-                            'cursor-pointer select-none',
-                          (
-                            header.column.columnDef.meta as any
-                          )?.className?.includes('justify-end') &&
-                            'flex-row-reverse'
+                          'flex w-full items-center',
+                          (header.column.columnDef.meta as any)?.className
                         )}
-                        size={'table'}
-                        variant='ghost'
-                        onClick={header.column.getToggleSortingHandler()}
                       >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {sortDirection ? (
-                          <ArrowUp
-                            className={cn(
-                              'transition-transform',
-                              sortDirection === 'asc' ? 'rotate-180' : ''
-                            )}
-                          />
-                        ) : (
-                          <div className={'h-4 w-4'} />
-                        )}
-                      </Button>
-                    </span>
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+                        <Button
+                          className={cn(
+                            header.column.getCanSort() &&
+                              'cursor-pointer select-none',
+                            (
+                              header.column.columnDef.meta as any
+                            )?.className?.includes('justify-end') &&
+                              'flex-row-reverse'
+                          )}
+                          size={'table'}
+                          variant='ghost'
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {sortDirection ? (
+                            <ArrowUp
+                              className={cn(
+                                'transition-transform',
+                                sortDirection === 'asc' ? 'rotate-180' : ''
+                              )}
+                            />
+                          ) : (
+                            <div className={'h-4 w-4'} />
+                          )}
+                        </Button>
+                      </span>
+                    </TableHead>
+                  )
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Transcript Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className='max-h-[80vh] w-full overflow-y-auto sm:max-w-[calc(100%-2rem)] '>
+          <DialogHeader>
+            <DialogTitle>
+              {transcriptGameNumber
+                ? `Game Transcript #${transcriptGameNumber}`
+                : 'Game Transcript'}
+            </DialogTitle>
+          </DialogHeader>
+          {/* Use iframe to isolate the transcript content and prevent style leakage */}
+          <div className='!h-[60vh] mt-4 w-full'>
+            <iframe
+              srcDoc={transcriptContent}
+              title={`Game Transcript #${transcriptGameNumber || ''}`}
+              className='h-full w-full border-0'
+              sandbox='allow-same-origin'
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
