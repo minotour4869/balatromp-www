@@ -2,20 +2,20 @@ import { api } from '@/trpc/server'
 import type { Metadata } from 'next'
 
 type Props = {
-  params: {
+  params: Promise<{
     gameNumber: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const gameNumber = Number.parseInt(params.gameNumber, 10)
+  const gameNumber = Number.parseInt((await params).gameNumber, 10)
   return {
     title: `Game Transcript #${gameNumber}`,
   }
 }
 
 export default async function TranscriptPage({ params }: Props) {
-  const gameNumber = Number.parseInt(params.gameNumber, 10)
+  const gameNumber = Number.parseInt((await params).gameNumber, 10)
 
   try {
     // Fetch transcript data server-side
