@@ -63,7 +63,9 @@ export function UserInfo() {
     </TimeZoneProvider>
   )
 }
-
+function unescapeName(str: string) {
+  return str.replaceAll('\\', '')
+}
 function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
@@ -176,7 +178,7 @@ function UserInfoComponent() {
   const currentName = lastGame?.playerName ?? discord_user.username
   const meaningful_games = games_played - ties
   const profileData = {
-    username: currentName,
+    username: unescapeName(currentName),
     avatar: discord_user.avatar_url,
     games: games_played,
     meaningful_games,
@@ -242,7 +244,7 @@ function UserInfoComponent() {
                         <p>Also known as:</p>
                         <ul className={'list-disc pl-4'}>
                           {aliases.map((alias) => (
-                            <li key={alias}>{alias}</li>
+                            <li key={alias}>{unescapeName(alias)}</li>
                           ))}
                         </ul>
                       </div>
