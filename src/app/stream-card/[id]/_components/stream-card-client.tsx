@@ -107,6 +107,23 @@ export function StreamCardClient() {
       }
     }
   }
+
+  if (id === '496441552709746688') {
+    return (
+      <div
+        className={'flex items-center justify-between gap-2 font-m6x11'}
+        style={{ zoom: '200%' }}
+      >
+        I am coming back from my 10 minute ban and a mod removal, and I want to
+        say that I think it was bullshit. Yes, I copy pasted a funny paragraph,
+        which happened to bring a laugh or a smile to a few people. If you
+        wanted that to stop, you could have just said so, there is so much
+        copypasta going on in this chat that I could have never thought that
+        deserved a 10 minute ban. Reggie is probably a mod in here and he is the
+        one that banned me. Anyway, I'm glad to be back.
+      </div>
+    )
+  }
   return (
     <div
       className={'flex items-center justify-between gap-2 font-m6x11'}
