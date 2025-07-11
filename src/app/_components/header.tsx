@@ -68,6 +68,12 @@ export function Header({
               </div>
             </NavbarMenuTrigger>
             <NavbarMenuContent>
+              <NavbarMenuLink href='/admin/blog'>
+                <p className='-mb-1 font-medium text-sm'>Blog</p>
+                <p className='text-[13px] text-fd-muted-foreground'>
+                  Manage blog posts
+                </p>
+              </NavbarMenuLink>
               <NavbarMenuLink href='/admin/logs'>
                 <p className='-mb-1 font-medium text-sm'>Logs</p>
                 <p className='text-[13px] text-fd-muted-foreground'>
@@ -201,6 +207,9 @@ export function Header({
                   <span>Admin</span>
                 </div>
                 <div className='ml-4 flex flex-col gap-1'>
+                  <Link href='/admin/blog' className='px-3 py-1 text-sm'>
+                    Blog
+                  </Link>
                   <Link href='/admin/logs' className='px-3 py-1 text-sm'>
                     Logs
                   </Link>
@@ -216,6 +225,11 @@ export function Header({
                 </div>
               </div>
             )}
+            <div className='sm:hidden'>
+              <Link href='/blog' className='px-3 py-2 font-medium text-sm'>
+                Blog
+              </Link>
+            </div>
             <div className='-ms-1.5 flex flex-row items-center gap-1.5 max-sm:mt-2'>
               {menuItems.filter(isSecondary).map((item, i) => (
                 <MenuLinkItem key={i} item={item} className='-me-1.5' />

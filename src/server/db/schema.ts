@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  boolean,
   index,
   integer,
   json,
@@ -9,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core'
 import type { AdapterAccount } from 'next-auth/adapters'
 
@@ -196,3 +198,25 @@ export const transcripts = pgTable('transcripts', {
   content: text('content').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+export const blogPosts = pgTable('blog_posts', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  title: varchar('title', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  content: text('content').notNull(),
+  excerpt: text('excerpt'),
+  published: boolean('published').notNull().default(false),
+  authorId: varchar('author_id', { length: 255 }).references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
+
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  author: one(users, {
+    fields: [blogPosts.authorId],
+    references: [users.id],
+  }),
+}))
