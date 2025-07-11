@@ -20,6 +20,19 @@ function generateSlug(title: string): string {
 }
 
 export const blogRouter = createTRPCRouter({
+  // Get all users that can be authors (admin only)
+  getAllUsers: adminProcedure.query(async () => {
+    const allUsers = await db.query.users.findMany({
+      columns: {
+        id: true,
+        name: true,
+        image: true,
+      },
+      orderBy: (users, { asc }) => [asc(users.name)],
+    })
+    return allUsers
+  }),
+
   // Get all published blog posts (public)
   getAllPublished: publicProcedure.query(async () => {
     const posts = await db.query.blogPosts.findMany({
@@ -90,6 +103,7 @@ export const blogRouter = createTRPCRouter({
         content: z.string().min(1),
         excerpt: z.string().optional(),
         published: z.boolean().default(false),
+        authorId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -115,7 +129,7 @@ export const blogRouter = createTRPCRouter({
           content: input.content,
           excerpt: input.excerpt || null,
           published: input.published,
-          authorId: ctx.session.user.id,
+          authorId: input.authorId || ctx.session.user.id,
         })
         .returning()
 
@@ -132,6 +146,7 @@ export const blogRouter = createTRPCRouter({
         excerpt: z.string().optional(),
         published: z.boolean(),
         updateSlug: z.boolean().default(false),
+        authorId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -171,6 +186,7 @@ export const blogRouter = createTRPCRouter({
           content: input.content,
           excerpt: input.excerpt || null,
           published: input.published,
+          ...(input.authorId && { authorId: input.authorId }),
         })
         .where(eq(blogPosts.id, input.id))
         .returning()

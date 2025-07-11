@@ -17,6 +17,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { api } from '@/trpc/react'
 import { useParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -35,11 +42,15 @@ export default function EditBlogPostPage() {
   const [excerpt, setExcerpt] = useState('')
   const [published, setPublished] = useState(false)
   const [updateSlug, setUpdateSlug] = useState(false)
+  const [authorId, setAuthorId] = useState<string | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   // Fetch post data
   const { data: posts, isLoading: isFetching } = api.blog.getAll.useQuery()
+
+  // Fetch all users for author selection
+  const { data: users, isLoading: isLoadingUsers } = api.blog.getAllUsers.useQuery()
 
   useEffect(() => {
     if (posts) {
@@ -49,6 +60,7 @@ export default function EditBlogPostPage() {
         setContent(currentPost.content)
         setExcerpt(currentPost.excerpt || '')
         setPublished(currentPost.published)
+        setAuthorId(currentPost.authorId)
         setIsLoading(false)
       } else {
         toast.error('Blog post not found')
@@ -104,6 +116,7 @@ export default function EditBlogPostPage() {
       excerpt: excerpt || undefined,
       published,
       updateSlug,
+      authorId,
     })
   }
 
@@ -170,6 +183,31 @@ export default function EditBlogPostPage() {
             placeholder='Brief summary of the post'
             className='h-24'
           />
+        </div>
+
+        <div className='space-y-2'>
+          <Label htmlFor='author'>Author</Label>
+          <Select
+            value={authorId}
+            onValueChange={setAuthorId}
+          >
+            <SelectTrigger id='author'>
+              <SelectValue placeholder='Select an author' />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoadingUsers ? (
+                <SelectItem value='loading' disabled>
+                  Loading...
+                </SelectItem>
+              ) : (
+                users?.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className='space-y-2'>

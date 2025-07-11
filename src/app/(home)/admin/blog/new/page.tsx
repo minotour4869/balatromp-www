@@ -10,6 +10,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { toast } from 'sonner'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function NewBlogPostPage() {
   const router = useRouter()
@@ -17,7 +24,11 @@ export default function NewBlogPostPage() {
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [published, setPublished] = useState(false)
+  const [authorId, setAuthorId] = useState<string | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Fetch all users for author selection
+  const { data: users, isLoading: isLoadingUsers } = api.blog.getAllUsers.useQuery()
 
   const createPost = api.blog.create.useMutation({
     onSuccess: () => {
@@ -33,31 +44,32 @@ export default function NewBlogPostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!title.trim()) {
       toast.error('Title is required')
       return
     }
-    
+
     if (!content.trim()) {
       toast.error('Content is required')
       return
     }
-    
+
     setIsSubmitting(true)
-    
+
     createPost.mutate({
       title,
       content,
       excerpt: excerpt || undefined,
       published,
+      authorId,
     })
   }
 
   return (
     <div className="container py-10">
       <h1 className="mb-8 text-4xl font-bold">Create New Blog Post</h1>
-      
+
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
@@ -69,7 +81,7 @@ export default function NewBlogPostPage() {
             required
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="excerpt">Excerpt (optional)</Label>
           <Textarea
@@ -80,7 +92,32 @@ export default function NewBlogPostPage() {
             className="h-24"
           />
         </div>
-        
+
+        <div className="space-y-2">
+          <Label htmlFor="author">Author</Label>
+          <Select
+            value={authorId}
+            onValueChange={setAuthorId}
+          >
+            <SelectTrigger id="author">
+              <SelectValue placeholder="Select an author (defaults to you)" />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoadingUsers ? (
+                <SelectItem value="loading" disabled>
+                  Loading...
+                </SelectItem>
+              ) : (
+                users?.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="content">Content</Label>
           <MarkdownEditor
@@ -90,7 +127,7 @@ export default function NewBlogPostPage() {
             minHeight="500px"
           />
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Switch
             id="published"
@@ -99,7 +136,7 @@ export default function NewBlogPostPage() {
           />
           <Label htmlFor="published">Publish immediately</Label>
         </div>
-        
+
         <div className="flex gap-4">
           <Button
             type="submit"
