@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { jokers } from '@/shared/jokers'
+import { vouchers } from '@/shared/vouchers'
 import { useFormatter } from 'next-intl'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -107,7 +108,12 @@ type Game = {
   logOwnerFinalJokers: string[] // Log owner's final jokers
   opponentFinalJokers: string[] // Opponent's final jokers
   events: LogEvent[]
-  rerolls: number
+  rerolls: number // Log owner's reroll count
+  rerollCostTotal: number // Log owner's total reroll cost
+  logOwnerVouchers: string[] // Log owner's vouchers
+  opponentRerolls: number // Opponent's reroll count
+  opponentRerollCostTotal: number // Opponent's total reroll cost
+  opponentVouchers: string[] // Opponent's vouchers
   winner: 'logOwner' | 'opponent' | null // Who won the game
   pvpBlinds: PvpBlind[] // PVP blind data
   currentPvpBlind: number | null // Current PVP blind number
@@ -140,6 +146,11 @@ const initGame = (id: number, startDate: Date): Game => ({
   opponentFinalJokers: [],
   events: [],
   rerolls: 0,
+  rerollCostTotal: 0,
+  logOwnerVouchers: [],
+  opponentRerolls: 0,
+  opponentRerollCostTotal: 0,
+  opponentVouchers: [],
   winner: null,
   pvpBlinds: [],
   currentPvpBlind: null,
@@ -347,6 +358,34 @@ export default function LogParser() {
           }
           continue
         }
+        if (line.includes('Client got nemesisEndGameStats message')) {
+          if (currentGame) {
+            // Extract Opponent Reroll Count
+            const rerollCountMatch = line.match(/\(reroll_count: (\d+)\)/)
+            if (rerollCountMatch?.[1]) {
+              currentGame.opponentRerolls = Number.parseInt(
+                rerollCountMatch[1],
+                10
+              )
+            }
+
+            // Extract Opponent Reroll Cost Total
+            const rerollCostMatch = line.match(/\(reroll_cost_total: (\d+)\)/)
+            if (rerollCostMatch?.[1]) {
+              currentGame.opponentRerollCostTotal = Number.parseInt(
+                rerollCostMatch[1],
+                10
+              )
+            }
+
+            // Extract Opponent Vouchers
+            const vouchersMatch = line.match(/\(vouchers: ([^)]+)\)/)
+            if (vouchersMatch?.[1]) {
+              currentGame.opponentVouchers = vouchersMatch[1].split('-')
+            }
+          }
+          continue
+        }
         if (line.includes('Client sent message: action:receiveEndGameJokers')) {
           if (currentGame) {
             // Mark end date if not already set (might happen slightly before 'got')
@@ -358,6 +397,31 @@ export default function LogParser() {
             if (keysMatch?.[1]) {
               const str = keysMatch?.[1]
               currentGame.logOwnerFinalJokers = await parseJokersFromString(str)
+            }
+          }
+          continue
+        }
+        if (line.includes('Client sent message: action:nemesisEndGameStats')) {
+          if (currentGame) {
+            // Extract Log Owner Reroll Count
+            const rerollCountMatch = line.match(/reroll_count:(\d+)/)
+            if (rerollCountMatch?.[1]) {
+              currentGame.rerolls = Number.parseInt(rerollCountMatch[1], 10)
+            }
+
+            // Extract Log Owner Reroll Cost Total
+            const rerollCostMatch = line.match(/reroll_cost_total:(\d+)/)
+            if (rerollCostMatch?.[1]) {
+              currentGame.rerollCostTotal = Number.parseInt(
+                rerollCostMatch[1],
+                10
+              )
+            }
+
+            // Extract Log Owner Vouchers
+            const vouchersMatch = line.match(/vouchers:(.+)$/)
+            if (vouchersMatch?.[1]) {
+              currentGame.logOwnerVouchers = vouchersMatch[1].split('-')
             }
           }
           continue
@@ -855,7 +919,8 @@ export default function LogParser() {
           ? ((currentGame.endDate instanceof Date
               ? currentGame.endDate.getTime()
               : new Date(currentGame.endDate).getTime()) -
-                currentGame.startDate.getTime()) / 1000
+              currentGame.startDate.getTime()) /
+            1000
           : null
         games.push(currentGame)
       }
@@ -1049,8 +1114,18 @@ export default function LogParser() {
                                   : opponentLabel}
                             </p>
                             <p>
-                              <strong>Rerolls:</strong>{' '}
+                              <strong>{ownerLabel} Rerolls:</strong>{' '}
                               {game.rerolls || 'Unknown'}
+                              {game.rerollCostTotal
+                                ? ` (Cost: ${game.rerollCostTotal})`
+                                : ''}
+                            </p>
+                            <p>
+                              <strong>{opponentLabel} Rerolls:</strong>{' '}
+                              {game.opponentRerolls || 'Unknown'}
+                              {game.opponentRerollCostTotal
+                                ? ` (Cost: ${game.opponentRerollCostTotal})`
+                                : ''}
                             </p>
                             <p>
                               <strong>Deck:</strong> {game.deck || 'Unknown'}
@@ -1259,6 +1334,93 @@ export default function LogParser() {
                                         >
                                           <Image
                                             src={`/cards/${jokerName}.png`}
+                                            alt={cleanName}
+                                            width={142}
+                                            height={190}
+                                          />
+                                          <span>{cleanName}</span>
+                                        </div>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : (
+                                <p className='text-gray-500 italic'>
+                                  No data found.
+                                </p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className='text-lg'>Vouchers</CardTitle>
+                          </CardHeader>
+                          <CardContent className='space-y-3 text-sm'>
+                            <div>
+                              <strong>
+                                {ownerLabel}
+                                {game.winner === 'logOwner' ? ' 🏆' : ''}:
+                              </strong>
+                              {game.logOwnerVouchers.length > 0 ? (
+                                <ul className='mt-3 ml-4 flex list-inside gap-3'>
+                                  {game.logOwnerVouchers.map((voucher, i) => {
+                                    if (!voucher) {
+                                      return null
+                                    }
+                                    const cleanName =
+                                      vouchers[voucher]?.name ??
+                                      cleanVoucherKey(voucher)
+                                    return (
+                                      // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
+                                      <li key={i} className={'list-none'}>
+                                        <div
+                                          className={
+                                            'flex flex-col items-center justify-center gap-2'
+                                          }
+                                        >
+                                          <Image
+                                            src={`/cards/${voucher}.png`}
+                                            alt={cleanName}
+                                            width={142}
+                                            height={190}
+                                          />
+                                          <span>{cleanName}</span>
+                                        </div>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : (
+                                <p className='text-gray-500 italic'>
+                                  No data found.
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <strong>
+                                {opponentLabel}
+                                {game.winner === 'opponent' ? ' 🏆' : ''}:
+                              </strong>
+                              {game.opponentVouchers.length > 0 ? (
+                                <ul className='mt-3 ml-4 flex list-inside gap-3'>
+                                  {game.opponentVouchers.map((voucher, i) => {
+                                    if (!voucher) {
+                                      return null
+                                    }
+                                    const cleanName =
+                                      vouchers[voucher]?.name ??
+                                      cleanVoucherKey(voucher)
+                                    return (
+                                      // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
+                                      <li key={i} className={'list-none'}>
+                                        <div
+                                          className={
+                                            'flex flex-col items-center justify-center gap-2'
+                                          }
+                                        >
+                                          <Image
+                                            src={`/cards/${voucher}.png`}
                                             alt={cleanName}
                                             width={142}
                                             height={190}
@@ -1630,6 +1792,18 @@ function cleanJokerKey(key: string): string {
   return key
     .trim()
     .replace(/^j_mp_|^j_/, '') // Remove prefixes j_mp_ or j_
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(
+      /\w\S*/g, // Capitalize each word (Title Case)
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    )
+}
+
+function cleanVoucherKey(key: string): string {
+  if (!key) return ''
+  return key
+    .trim()
+    .replace(/^v_/, '') // Remove prefix v_
     .replace(/_/g, ' ') // Replace underscores with spaces
     .replace(
       /\w\S*/g, // Capitalize each word (Title Case)
