@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   try {
     // Parse request body to get date range parameters
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch((e) => console.log(e))
     const startDate = body.start_date
     const endDate = body.end_date
 
@@ -26,13 +26,13 @@ export async function POST(request: Request) {
       if (endDate) {
         console.log(`End date: ${endDate}`)
       }
-      
+
       await syncHistoryByDateRange(startDate, endDate)
     } catch (err) {
       console.error('history refresh by date range failed:', err)
       return new Response('internal error', { status: 500 })
     }
-    
+
     return Response.json({ success: true })
   } catch (err) {
     console.error('refresh failed:', err)

@@ -1,11 +1,11 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
+import { neatqueue_service } from '@/server/services/neatqueue.service'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
-import { neatqueue_service } from '@/server/services/neatqueue.service'
 
 export const history_router = createTRPCRouter({
   getTranscript: publicProcedure
@@ -15,7 +15,7 @@ export const history_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      return await neatqueue_service.get_transcript(input.gameNumber);
+      return await neatqueue_service.get_transcript(input.gameNumber)
     }),
   games_per_hour: publicProcedure
     .input(
@@ -198,12 +198,15 @@ export async function syncHistoryByDateRange(
     searchParams.end_date = end_date
   }
 
-  const data = await ky
-    .get('https://api.neatqueue.com/api/history/1226193436521267223', {
+  const response = await ky.get(
+    'https://api.neatqueue.com/api/history/1226193436521267223',
+    {
       searchParams,
-      timeout: 60000,
-    })
-    .json<any>()
+      timeout: 1000000,
+    }
+  )
+
+  const data = await response.json<any>()
 
   const chunkedData = chunk(data.data, 100)
   for (const chunk of chunkedData) {
