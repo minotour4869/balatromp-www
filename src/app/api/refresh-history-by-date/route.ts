@@ -13,10 +13,40 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Parse request body to get date range parameters
-    const body = await request.json().catch((e) => console.log(e))
-    const startDate = body.start_date
-    const endDate = body.end_date
+    // Check if request has a body
+    let startDate: string | undefined
+    let endDate: string | undefined
+
+    try {
+      // Try to parse request body if it exists
+      const body = await request.json().catch(() => null)
+      if (body) {
+        startDate = body.start_date
+        endDate = body.end_date
+      }
+    } catch (e) {
+      // If no body or parsing fails, we'll use default dates
+      console.log('No request body or empty body, using default date (yesterday)')
+    }
+
+    // If no dates provided, default to a 3-day range (yesterday, today, and tomorrow)
+    if (!startDate && !endDate) {
+      const today = new Date()
+
+      // Calculate yesterday
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+
+      // Calculate tomorrow
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      // Format dates as YYYY-MM-DD
+      startDate = yesterday.toISOString().split('T')[0]
+      endDate = tomorrow.toISOString().split('T')[0]
+
+      console.log(`No dates provided, defaulting to 3-day range: ${startDate} to ${endDate}`)
+    }
 
     try {
       console.log('refreshing history by date range...')
