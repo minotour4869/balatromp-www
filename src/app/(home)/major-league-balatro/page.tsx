@@ -1,14 +1,14 @@
-import { TimeZoneProvider } from '@/components/timezone-provider'
+import {TimeZoneProvider} from '@/components/timezone-provider'
 import Link from 'next/link'
-import { Competitors } from './_components/competitors'
-import { HeroSection } from './_components/hero'
-import { NextMatchInfo } from './_components/next-match-info'
-import { Organizer } from './_components/organizer'
-import { PrizePool } from './_components/prize-pool'
-import { MlbSchedule } from './_components/schedule'
-import { StayUpdated } from './_components/stay-updated'
-import { TournamentFormat } from './_components/tournament-format'
-import { matches } from './_constants/matches'
+import {Competitors} from './_components/competitors'
+import {HeroSection} from './_components/hero'
+import {NextMatchInfo} from './_components/next-match-info'
+import {Organizer} from './_components/organizer'
+import {PrizePool} from './_components/prize-pool'
+import {MlbSchedule} from './_components/schedule'
+import {StayUpdated} from './_components/stay-updated'
+import {TournamentFormat} from './_components/tournament-format'
+import {matches} from './_constants/matches'
 
 export default function MLBPage() {
   const currentDate = new Date()
@@ -21,25 +21,25 @@ export default function MLBPage() {
   return (
     <div className='flex min-h-screen flex-col'>
       <main className='flex-1'>
-        <HeroSection />
+        <HeroSection/>
         {nextMatch && (
           <TimeZoneProvider>
-            <NextMatchInfo nextMatch={nextMatch} />
+            <NextMatchInfo nextMatch={nextMatch}/>
           </TimeZoneProvider>
         )}
         {/*<Standings />*/}
 
-        <TournamentFormat />
+        <TournamentFormat/>
 
-        <Competitors />
+        <Competitors/>
 
-        <MlbSchedule matches={matches} />
+        <MlbSchedule matches={matches}/>
 
-        <PrizePool />
+        <PrizePool/>
 
-        <Organizer />
+        <Organizer/>
 
-        <StayUpdated />
+        <StayUpdated/>
       </main>
 
       <footer className='border-t py-6 md:py-0'>
@@ -60,12 +60,6 @@ export default function MLBPage() {
               className='text-muted-foreground text-sm underline-offset-4 hover:underline'
             >
               Documentation
-            </Link>
-            <Link
-              href='/about'
-              className='text-muted-foreground text-sm underline-offset-4 hover:underline'
-            >
-              About
             </Link>
           </div>
         </div>

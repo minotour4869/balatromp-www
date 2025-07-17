@@ -1,9 +1,9 @@
-import { GithubLinks } from '@/app/_components/github-links'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { SiGithub } from '@icons-pack/react-simple-icons'
-import { ChevronRight, MessageSquare, Trophy, Users } from 'lucide-react'
+import {GithubLinks} from '@/app/_components/github-links'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
+import {DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
+import {SiGithub} from '@icons-pack/react-simple-icons'
+import {ChevronRight, MessageSquare, Trophy, Users} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -36,7 +36,7 @@ export default function Home() {
               >
                 <Link href='/docs/getting-started/installation'>
                   Get Started
-                  <ChevronRight className='ml-2 h-4 w-4' />
+                  <ChevronRight className='ml-2 h-4 w-4'/>
                 </Link>
               </Button>
               <Button variant='outline' size='lg' asChild>
@@ -143,7 +143,7 @@ export default function Home() {
             <Card className='flex h-full flex-col'>
               <CardHeader className='pb-2'>
                 <div className='mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100'>
-                  <Users className='h-6 w-6 text-red-600' />
+                  <Users className='h-6 w-6 text-red-600'/>
                 </div>
                 <CardTitle>Direct Play</CardTitle>
               </CardHeader>
@@ -184,7 +184,7 @@ export default function Home() {
             <Card className='flex h-full flex-col'>
               <CardHeader className='pb-2'>
                 <div className='mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100'>
-                  <Trophy className='h-6 w-6 text-red-600' />
+                  <Trophy className='h-6 w-6 text-red-600'/>
                 </div>
                 <CardTitle>Matchmaking Queues</CardTitle>
               </CardHeader>
@@ -221,7 +221,7 @@ export default function Home() {
             <Card className='flex h-full flex-col'>
               <CardHeader className='pb-2'>
                 <div className='mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100'>
-                  <MessageSquare className='h-6 w-6 text-red-600' />
+                  <MessageSquare className='h-6 w-6 text-red-600'/>
                 </div>
                 <CardTitle>Custom LFG</CardTitle>
               </CardHeader>
@@ -268,7 +268,7 @@ export default function Home() {
             >
               <Link href='/leaderboards'>
                 View Leaderboards
-                <Trophy className='ml-2 h-4 w-4' />
+                <Trophy className='ml-2 h-4 w-4'/>
               </Link>
             </Button>
           </div>
@@ -289,7 +289,8 @@ export default function Home() {
                 </div>
                 <ul className='grid gap-6'>
                   <li className='flex items-start gap-4'>
-                    <div className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
+                    <div
+                      className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
                       1
                     </div>
                     <div className='space-y-1'>
@@ -301,7 +302,8 @@ export default function Home() {
                     </div>
                   </li>
                   <li className='flex items-start gap-4'>
-                    <div className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
+                    <div
+                      className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
                       2
                     </div>
                     <div className='space-y-1'>
@@ -313,7 +315,8 @@ export default function Home() {
                     </div>
                   </li>
                   <li className='flex items-start gap-4'>
-                    <div className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
+                    <div
+                      className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600'>
                       3
                     </div>
                     <div className='space-y-1'>
@@ -382,12 +385,6 @@ export default function Home() {
             >
               Documentation
             </Link>
-            <Link
-              href='/about'
-              className='text-muted-foreground text-sm underline-offset-4 hover:underline'
-            >
-              About
-            </Link>
             {/*<Link*/}
             {/*  href='/credits'*/}
             {/*  className='text-muted-foreground text-sm underline-offset-4 hover:underline'*/}
@@ -397,7 +394,7 @@ export default function Home() {
             <GithubLinks>
               <DropdownMenuTrigger asChild>
                 <Button variant='ghost' size='icon'>
-                  <SiGithub className='h-5 w-5' />
+                  <SiGithub className='h-5 w-5'/>
                   <span className='sr-only'>GitHub</span>
                 </Button>
               </DropdownMenuTrigger>
