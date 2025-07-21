@@ -563,6 +563,7 @@ function RawLeaderboardTable({
                       </TableCell>
                       <TableCell>
                         <Link
+                          prefetch={false}
                           href={`/players/${entry.id}`}
                           className='group flex items-center gap-2'
                         >
