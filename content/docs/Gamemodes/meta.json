@@ -1,4 +1,5 @@
 {
-  "pages": ["Attrition", "Showdown", "Survival"],
+  "title": "Gamemodes",
+  "pages": ["List-of-gamemodes"],
   "defaultOpen": true
 }
