@@ -72,6 +72,7 @@ export default async function Page(props: {
             Xmult: (props) => <Xmult {...(props as any)} />,
             Spectral: (props) => <Spectral {...(props as any)} />,
             Mult: (props) => <Mult {...(props as any)} />,
+            Nemesis: (props) => <Nemesis {...(props as any)} />,
           }}
         />
       </DocsBody>
