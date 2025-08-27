@@ -1,7 +1,6 @@
 import '@/styles/globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { TRPCReactProvider } from '@/trpc/react'
-import { Banner } from 'fumadocs-ui/components/banner'
 import { RootProvider } from 'fumadocs-ui/provider'
 import type { Metadata } from 'next'
 import { SessionProvider } from 'next-auth/react'

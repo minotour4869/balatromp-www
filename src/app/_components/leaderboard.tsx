@@ -40,7 +40,11 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import {
+  RANKED_CHANNEL,
+  SMALLWORLD_CHANNEL,
+  VANILLA_CHANNEL,
+} from '@/shared/constants'
 import {
   type Season,
   SeasonSchema,
@@ -173,14 +177,26 @@ export function LeaderboardPage() {
       channel_id: VANILLA_CHANNEL,
       season,
     })
+  const [smallWorldLeaderboardResult] =
+    api.leaderboard.get_leaderboard.useSuspenseQuery({
+      channel_id: SMALLWORLD_CHANNEL,
+      season,
+    })
 
   // Get the current leaderboard based on selected tab
   const currentLeaderboardResult = useMemo(
     () =>
       leaderboardType === 'ranked'
         ? rankedLeaderboardResult
-        : vanillaLeaderboardResult,
-    [leaderboardType, rankedLeaderboardResult, vanillaLeaderboardResult]
+        : leaderboardType === 'vanilla'
+          ? vanillaLeaderboardResult
+          : smallWorldLeaderboardResult,
+    [
+      leaderboardType,
+      rankedLeaderboardResult,
+      vanillaLeaderboardResult,
+      smallWorldLeaderboardResult,
+    ]
   )
 
   const currentLeaderboard = currentLeaderboardResult.data
@@ -302,8 +318,9 @@ export function LeaderboardPage() {
             <div className='mb-6 flex w-full flex-col items-start justify-between gap-4 md:items-center lg:flex-row'>
               <div className='flex flex-col gap-4 md:flex-row md:items-center'>
                 <TabsList className='border border-gray-200 border-b bg-gray-50 dark:border-zinc-800 dark:bg-zinc-800/50'>
-                  <TabsTrigger value='ranked'>Ranked Leaderboard</TabsTrigger>
-                  <TabsTrigger value='vanilla'>Vanilla Leaderboard</TabsTrigger>
+                  <TabsTrigger value='ranked'>Ranked</TabsTrigger>
+                  <TabsTrigger value='vanilla'>Vanilla</TabsTrigger>
+                  <TabsTrigger value='smallworld'>Smallworld</TabsTrigger>
                 </TabsList>
 
                 <div className='flex items-center gap-2'>
