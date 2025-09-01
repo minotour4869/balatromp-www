@@ -137,26 +137,26 @@ export function LeaderboardPage() {
   const searchParams = useSearchParams()
   // Get the leaderboard type from URL or default to 'ranked'
   const leaderboardType = searchParams.get('type') || 'ranked'
-  // Get the season from URL or default to 'season3'
+  // Get the season from URL or default to 'season4'
   const seasonParam = searchParams.get('season') as Season | null
   const season =
     seasonParam && SeasonSchema.safeParse(seasonParam).success
       ? seasonParam
-      : 'season3'
+      : 'season4'
   const [gamesAmount, setGamesAmount] = useState([0, 100])
 
   // State for search and sorting
   const [searchQuery, setSearchQuery] = useState('')
   const [sortColumn, setSortColumn] = useState(
-    season === 'season2' ? 'mmr' : 'rank'
+    ['season2', 'season3'].includes(season) ? 'mmr' : 'rank'
   )
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
-    season === 'season2' ? 'desc' : 'asc'
+    ['season2', 'season3'].includes(season) ? 'desc' : 'asc'
   )
 
   // Update sort settings when season changes
   useEffect(() => {
-    if (season === 'season2') {
+    if (['season2', 'season3'].includes(season)) {
       setSortColumn('mmr')
       setSortDirection('desc')
     } else {
@@ -337,6 +337,9 @@ export function LeaderboardPage() {
                       <SelectValue placeholder='Select season' />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value='season4'>
+                        {getSeasonDisplayName('season4')}
+                      </SelectItem>
                       <SelectItem value='season3'>
                         {getSeasonDisplayName('season3')}
                       </SelectItem>

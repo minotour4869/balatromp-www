@@ -68,7 +68,7 @@ export function StreamCardClient() {
   const [gamesQueryResult, gamesQuery] =
     api.history.user_games.useSuspenseQuery({ user_id: id })
   const allGames = gamesQueryResult || []
-  const games = filterGamesBySeason(allGames, 'season3')
+  const games = filterGamesBySeason(allGames, 'season4')
 
   const [rankedUserRank, rankedUserQuery] =
     api.leaderboard.get_user_rank.useSuspenseQuery({
@@ -175,7 +175,7 @@ function Opponent({ id, wins }: { id: string; wins?: number }) {
     user_id: id,
   })
   const allGames = gamesQueryResult || []
-  const games = filterGamesBySeason(allGames, 'season3')
+  const games = filterGamesBySeason(allGames, 'season4')
 
   const { data: rankedUserRank } = api.leaderboard.get_user_rank.useQuery({
     channel_id: RANKED_CHANNEL,

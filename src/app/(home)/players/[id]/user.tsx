@@ -75,7 +75,7 @@ function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
   const timeZone = useTimeZone()
-  const [season, setSeason] = useState<Season>('season3')
+  const [season, setSeason] = useState<Season>('season4')
 
   const [leaderboardFilter, setLeaderboardFilter] = useState('all')
   const { id } = useParams()
@@ -141,7 +141,11 @@ function UserInfoComponent() {
 
   // Determine which historic data to show (opposite of current season)
   const historicRankedData =
-    season === 'season2' ? rankedUserRankS3 : rankedUserRankS2
+    season === 'season2'
+      ? rankedUserRankS3
+      : season === 'season3'
+        ? rankedUserRankS2
+        : rankedUserRankS3
   // Filter games by season
   const seasonFilteredGames = filterGamesBySeason(games, season)
 
@@ -559,6 +563,9 @@ function UserInfoComponent() {
                     <SelectValue placeholder='Season' />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value='season4'>
+                      {getSeasonDisplayName('season4')}
+                    </SelectItem>
                     <SelectItem value='season3'>
                       {getSeasonDisplayName('season3')}
                     </SelectItem>

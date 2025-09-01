@@ -2,10 +2,11 @@ import { redis } from '../redis'
 import { type LeaderboardEntry, neatqueue_service } from './neatqueue.service'
 import { db } from '@/server/db'
 import { leaderboardSnapshots, metadata } from '@/server/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, and, gte, lt } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
+import { SEASON_3_START_DATE, SEASON_4_START_DATE } from '@/shared/seasons'
 
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
@@ -25,6 +26,7 @@ export type UserRankResponse = {
 
 export class LeaderboardService {
   private season2DataCache: Map<string, LeaderboardEntry[]> = new Map()
+  private season3DataCache: Map<string, LeaderboardEntry[]> = new Map()
 
   private getZSetKey(channel_id: string) {
     return `zset:leaderboard:${channel_id}`
@@ -34,7 +36,8 @@ export class LeaderboardService {
   private loadSeason2Data(channel_id: string): LeaderboardEntry[] {
     // Check if data is already cached
     if (this.season2DataCache.has(channel_id)) {
-      return this.season2DataCache.get(channel_id)!
+      const cached = this.season2DataCache.get(channel_id)
+      if (cached) return cached
     }
 
     try {
@@ -91,6 +94,74 @@ export class LeaderboardService {
 
     // Find the user entry in the sorted leaderboard
     const userEntry = sortedLeaderboard.find(entry => entry.id === user_id)
+    return userEntry || null
+  }
+
+  // Load Season 3 data from the database snapshot table
+  private async loadSeason3Data(channel_id: string): Promise<LeaderboardEntry[]> {
+    // Use cache if available
+    if (this.season3DataCache.has(channel_id)) {
+      return this.season3DataCache.get(channel_id) as LeaderboardEntry[]
+    }
+
+    try {
+      // Find the latest snapshot within the Season 3 window for the channel
+      const snapshot = await db
+        .select()
+        .from(leaderboardSnapshots)
+        .where(
+          and(
+            eq(leaderboardSnapshots.channelId, channel_id),
+            gte(leaderboardSnapshots.timestamp, SEASON_3_START_DATE),
+            lt(leaderboardSnapshots.timestamp, SEASON_4_START_DATE)
+          )
+        )
+        .orderBy(desc(leaderboardSnapshots.timestamp))
+        .limit(1)
+        .then((rows) => rows[0])
+
+      if (!snapshot) {
+        console.warn(`No Season 3 snapshot found for channel ${channel_id}`)
+        this.season3DataCache.set(channel_id, [])
+        return []
+      }
+
+      const entries = (snapshot.data as LeaderboardEntry[]).map((e) => ({
+        ...e,
+        // Ensure number fields are numbers
+        mmr: Number(e.mmr),
+        wins: Number(e.wins),
+        losses: Number(e.losses),
+        totalgames: Number(e.totalgames),
+        peak_mmr: Number(e.peak_mmr),
+        peak_streak: Number(e.peak_streak),
+        winrate: Number(e.winrate),
+      }))
+
+      this.season3DataCache.set(channel_id, entries)
+      return entries
+    } catch (error) {
+      console.error('Error loading Season 3 data from DB:', error)
+      return []
+    }
+  }
+
+  // Get Season 3 leaderboard data
+  async getSeason3Leaderboard(channel_id: string): Promise<LeaderboardEntry[]> {
+    const entries = await this.loadSeason3Data(channel_id)
+
+    // Sort by MMR desc and recompute ranks
+    const sortedEntries = [...entries].sort((a, b) => b.mmr - a.mmr)
+    return sortedEntries.map((entry, idx) => ({
+      ...entry,
+      rank: idx + 1,
+    }))
+  }
+
+  // Get Season 3 user rank data
+  async getSeason3UserRank(channel_id: string, user_id: string): Promise<LeaderboardEntry | null> {
+    const sortedLeaderboard = await this.getSeason3Leaderboard(channel_id)
+    const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
     return userEntry || null
   }
 
