@@ -9,7 +9,7 @@ import {
   users,
   verificationTokens,
 } from '@/server/db/schema'
-type UserRole = 'user' | 'admin'
+type UserRole = 'user' | 'admin' | 'owner'
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
  * object and keep type safety.
@@ -77,7 +77,8 @@ export const authConfig = {
       user: {
         ...session.user,
         id: user.id,
-        discord_id: session.user.discord_id,
+        discord_id: (user as any).discord_id ?? (session.user as any).discord_id,
+        role: (user as any).role as any,
       },
     }),
   },
