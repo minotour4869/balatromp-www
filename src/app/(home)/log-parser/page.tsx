@@ -703,6 +703,20 @@ export default function LogParser() {
           continue
         }
 
+        // Detect disconnect message
+        if (
+          line.includes(
+            'Client got disconnected message:  (action: disconnected)'
+          )
+        ) {
+          currentGame.events.push({
+            timestamp,
+            text: 'Log owner disconnected',
+            type: 'system',
+          })
+          continue
+        }
+
         // Parse endPvP messages to determine the winner of each blind
         if (line.includes('Client got endPvP message')) {
           if (currentGame.currentPvpBlind !== null) {
