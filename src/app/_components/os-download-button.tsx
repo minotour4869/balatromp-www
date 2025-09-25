@@ -11,7 +11,7 @@ const DOWNLOAD_LINKS = {
     'https://github.com/Balatro-Multiplayer/Balatro-Multiplayer-Launcher/releases/latest/download/balatro-multiplayer-launcher.exe',
   Mac: 'https://github.com/Balatro-Multiplayer/Balatro-Multiplayer-Launcher/releases/latest/download/balatro-multiplayer-launcher.dmg',
   Linux:
-    'https://github.com/Balatro-Multiplayer/Balatro-Multiplayer-Launcher/releases/latest/download/balatro-multiplayer-launcher.deb',
+    'https://github.com/Balatro-Multiplayer/Balatro-Multiplayer-Launcher/releases/latest/download/balatro-multiplayer-launcher.AppImage',
 }
 
 export function OSDownloadButton() {
