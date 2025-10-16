@@ -4,10 +4,10 @@ import { redis } from '../redis'
 import { transcripts } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
-const NEATQUEUE_URL = 'https://api.neatqueue.com/api'
+const BOTLATRO_URL = 'http://virtualized.dev:4391/api/stats'
 
 const instance = ky.create({
-  prefixUrl: NEATQUEUE_URL,
+  prefixUrl: BOTLATRO_URL,
   timeout: 60000,
 })
 
