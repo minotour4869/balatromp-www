@@ -4,7 +4,7 @@ import { syncHistory } from '@/server/api/routers/history'
 import type { PlayerState } from '@/server/api/routers/player-state'
 import { PLAYER_STATE_KEY, redis } from '@/server/redis'
 import { leaderboardService } from '@/server/services/leaderboard'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import { RANKED_QUEUE_ID, VANILLA_QUEUE_ID } from '@/shared/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 const EXPECTED_QUERY_SECRET = process.env.WEBHOOK_QUERY_SECRET
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         console.log({ playerIds })
         await syncHistory()
         await Promise.allSettled(
-          [RANKED_CHANNEL].map((id) =>
+          [RANKED_QUEUE_ID].map((id) =>
             leaderboardService.refreshLeaderboard(id)
           )
         )

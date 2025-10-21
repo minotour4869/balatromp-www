@@ -1,7 +1,7 @@
 import { LeaderboardService } from '@/server/services/leaderboard'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import { RANKED_QUEUE_ID, VANILLA_QUEUE_ID } from '@/shared/constants'
 
-const CHANNEL_IDS = [RANKED_CHANNEL, VANILLA_CHANNEL]
+const CHANNEL_IDS = [RANKED_QUEUE_ID, VANILLA_QUEUE_ID]
 
 async function refresh() {
   const service = new LeaderboardService()
