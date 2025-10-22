@@ -169,18 +169,18 @@ export function LeaderboardPage() {
   // Fetch leaderboard data (use queue id if season 4, use old channel id otherwise)
   const [rankedLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: season == 'season4' ? RANKED_QUEUE_ID : OLD_RANKED_CHANNEL,
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_RANKED_CHANNEL : RANKED_QUEUE_ID,
       season,
     })
 
   const [vanillaLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: season == 'season4' ? VANILLA_QUEUE_ID : OLD_VANILLA_CHANNEL,
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID,
       season,
     })
   const [smallWorldLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: season == 'season4' ? SMALLWORLD_QUEUE_ID : OLD_SMALLWORLD_CHANNEL,
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_SMALLWORLD_CHANNEL : SMALLWORLD_QUEUE_ID,
       season,
     })
 
