@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { OBSController } from '@/lib/obs-connection'
-import { RANKED_CHANNEL } from '@/shared/constants'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { api } from '@/trpc/react'
 import { SettingsIcon, X } from 'lucide-react'
 import * as React from 'react'
@@ -53,7 +53,7 @@ export function ObsControlPanelClient() {
     []
   )
   const players = api.leaderboard.get_leaderboard.useQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
   })
 
   const playersForSelect = players.data?.data?.map((player) => ({
@@ -98,14 +98,14 @@ export function ObsControlPanelClient() {
   )
   const { data: player1Info } = api.leaderboard.get_user_rank.useQuery(
     {
-      channel_id: RANKED_CHANNEL,
+      channel_id: RANKED_QUEUE_ID,
       user_id: value1 ?? '',
     },
     { enabled: !!value1 }
   )
   const { data: player2Info } = api.leaderboard.get_user_rank.useQuery(
     {
-      channel_id: RANKED_CHANNEL,
+      channel_id: RANKED_QUEUE_ID,
       user_id: value2 ?? '',
     },
     { enabled: !!value2 }

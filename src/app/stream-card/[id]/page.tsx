@@ -1,5 +1,5 @@
 import { StreamCardClient } from '@/app/stream-card/[id]/_components/stream-card-client'
-import { RANKED_CHANNEL } from '@/shared/constants'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { HydrateClient, api } from '@/trpc/server'
 import { Suspense } from 'react'
 
@@ -16,7 +16,7 @@ export default async function StreamCardPage({
       }),
 
       api.leaderboard.get_user_rank.prefetch({
-        channel_id: RANKED_CHANNEL,
+        channel_id: RANKED_QUEUE_ID,
         user_id: id,
       }),
     ])
