@@ -1,5 +1,5 @@
 import { redis } from '../redis'
-import { type LeaderboardEntry, neatqueue_service } from './neatqueue.service'
+import { type LeaderboardEntry, neatqueue_service } from './botlatro.service'
 import { db } from '@/server/db'
 import { leaderboardSnapshots, metadata } from '@/server/db/schema'
 import { eq, desc, and, gte, lt } from 'drizzle-orm'

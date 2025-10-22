@@ -4,7 +4,7 @@ import {
   publicProcedure,
 } from '@/server/api/trpc'
 import { LeaderboardService } from '@/server/services/leaderboard'
-import type { LeaderboardEntry } from '@/server/services/neatqueue.service'
+import type { LeaderboardEntry } from '@/server/services/botlatro.service'
 import { SeasonSchema } from '@/shared/seasons'
 import { z } from 'zod'
 const service = new LeaderboardService()

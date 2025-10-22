@@ -3,8 +3,9 @@ import { db } from '../db'
 import { redis } from '../redis'
 import { transcripts } from '../db/schema'
 import { eq } from 'drizzle-orm'
+import { discord_service } from './discord.service'
 
-const BOTLATRO_URL = 'http://balatro.virtualized.dev:4931/api/stats'
+const BOTLATRO_URL = 'http://balatro.virtualized.dev:4931/api/stats/'
 
 const instance = ky.create({
   prefixUrl: BOTLATRO_URL,
@@ -13,32 +14,24 @@ const instance = ky.create({
 
 export const TRANSCRIPT_CACHE_KEY = (gameNumber: number) => `transcript:${gameNumber}`
 
-export const QUEUE_IDS = {
-  ranked: 1,
-  smallworld: 2,
-  sandbox: 3,
-  vanilla: 4,
-  casual: 5,
-} as const
-
 export const neatqueue_service = {
-  get_leaderboard: async (queue_id: number) => {
+  get_leaderboard: async (queue_id: string) => {
     const res = await instance
-      .get(`leaderboard/${queue_id}`)
+      .get(`leaderboard/${queue_id}?limit=100000`)
       .json<LeaderboardResponse>()
 
-    res.alltime.sort((a, b) => b.data.mmr - a.data.mmr)
+    res.leaderboard.sort((a, b) => b.mmr - a.mmr)
 
-    const fixed: Array<Data & { id: string; name: string }> = res.alltime.map(
+    const fixed: Array<LeaderboardEntry> = res.leaderboard.map(
       (entry, idx) => ({
-        ...entry.data,
-        rank: idx + 1,
+        ...entry,
+        rank: entry.rank,
         id: entry.id,
-        name: entry.name,
-        totalgames: entry.data.wins + entry.data.losses,
+        name: entry.name ?? `User: ${entry.id}`,
+        totalgames: entry.wins + entry.losses,
         winrate:
-          entry.data.wins + entry.data.losses > 0
-            ? entry.data.wins / (entry.data.wins + entry.data.losses)
+          entry.wins + entry.losses > 0
+            ? entry.wins / (entry.wins + entry.losses)
             : 0,
       })
     )
@@ -108,33 +101,24 @@ export const neatqueue_service = {
   },
 }
 
-export type Data = {
-  mmr: number
-  wins: number
-  losses: number
-  streak: number
-  totalgames: number
-  decay: number
-  ign?: any
-  peak_mmr: number
-  peak_streak: number
-  rank: number
-  winrate: number
-}
-
-export type LeaderboardEntryInternal = {
+export type LeaderboardEntry = {
   id: string
-  data: Data
   name: string
+    mmr: number
+    wins: number
+    losses: number
+    streak: number
+    totalgames: number
+    decay?: number
+    ign?: any
+    peak_mmr: number
+    peak_streak: number
+    rank: number
+    winrate: number
 }
 
 export type LeaderboardResponse = {
-  alltime: LeaderboardEntryInternal[]
-}
-
-export type LeaderboardEntry = Data & {
-  id: string
-  name: string
+  leaderboard: LeaderboardEntry[]
 }
 
 export type MatchHistoryEntry = {

@@ -1,10 +1,10 @@
 import { env } from '@/env'
 import { leaderboardService } from '@/server/services/leaderboard'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import { RANKED_QUEUE_ID, VANILLA_QUEUE_ID } from '@/shared/constants'
 import { headers } from 'next/headers'
 
 const SECURE_TOKEN = env.CRON_SECRET
-const CHANNEL_IDS = [RANKED_CHANNEL, VANILLA_CHANNEL]
+const CHANNEL_IDS = [RANKED_QUEUE_ID, VANILLA_QUEUE_ID]
 export async function POST() {
   const headersList = await headers()
   const authToken = headersList.get('authorization')?.replace('Bearer ', '')

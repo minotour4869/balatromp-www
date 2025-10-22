@@ -26,9 +26,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-  RANKED_CHANNEL,
-  SMALLWORLD_CHANNEL,
-  VANILLA_CHANNEL,
+  RANKED_QUEUE_ID,
+  SMALLWORLD_QUEUE_ID,
+  VANILLA_QUEUE_ID,
 } from '@/shared/constants'
 import {
   type Season,
@@ -90,44 +90,44 @@ function UserInfoComponent() {
 
   // Fetch current season data
   const [rankedLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     season,
   })
 
   const [vanillaLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery(
     {
-      channel_id: VANILLA_CHANNEL,
+      channel_id: VANILLA_QUEUE_ID,
       season,
     }
   )
 
   // Fetch current season user rank
   const [vanillaUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: VANILLA_CHANNEL,
+    channel_id: VANILLA_QUEUE_ID,
     user_id: id,
     season,
   })
   const [smallWorldUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: SMALLWORLD_CHANNEL,
+    channel_id: SMALLWORLD_QUEUE_ID,
     user_id: id,
     season,
   })
   const [rankedUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season,
   })
 
   // Fetch Season 2 data for historic comparison
   const [rankedUserRankS2Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season: 'season2',
   })
 
   // Fetch Season 3 data for historic comparison
   const [rankedUserRankS3Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season: 'season3',
   })

@@ -41,9 +41,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-  RANKED_CHANNEL,
-  SMALLWORLD_CHANNEL,
-  VANILLA_CHANNEL,
+    OLD_RANKED_CHANNEL, OLD_SMALLWORLD_CHANNEL, OLD_VANILLA_CHANNEL,
+    RANKED_QUEUE_ID,
+    SMALLWORLD_QUEUE_ID,
+    VANILLA_QUEUE_ID,
 } from '@/shared/constants'
 import {
   type Season,
@@ -165,21 +166,21 @@ export function LeaderboardPage() {
     }
   }, [season])
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data (use queue id if season 4, use old channel id otherwise)
   const [rankedLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: RANKED_CHANNEL,
+      channel_id: season == 'season4' ? RANKED_QUEUE_ID : OLD_RANKED_CHANNEL,
       season,
     })
 
   const [vanillaLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: VANILLA_CHANNEL,
+      channel_id: season == 'season4' ? VANILLA_QUEUE_ID : OLD_VANILLA_CHANNEL,
       season,
     })
   const [smallWorldLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: SMALLWORLD_CHANNEL,
+      channel_id: season == 'season4' ? SMALLWORLD_QUEUE_ID : OLD_SMALLWORLD_CHANNEL,
       season,
     })
 
@@ -304,7 +305,7 @@ export function LeaderboardPage() {
               <AlertTitle>Stale Data</AlertTitle>
               <AlertDescription>
                 The leaderboard data is currently stale due to issues with the
-                neatqueue service. We're showing you the latest available data.
+                botlatro service. We're showing you the latest available data.
                 Please check back later.
               </AlertDescription>
             </Alert>
