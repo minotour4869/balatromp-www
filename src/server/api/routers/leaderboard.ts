@@ -18,26 +18,26 @@ export const leaderboard_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      // if (input.season === 'season2') {
-      //   // For Season 2, use the snapshot data
-      //   const season2Data = await service.getSeason2Leaderboard(
-      //     input.channel_id
-      //   )
-      //   return {
-      //     data: season2Data,
-      //     isStale: false,
-      //   }
-      // }
-      // if (input.season === 'season3') {
-      //   // For Season 3, use the DB snapshot data
-      //   const season3Data = await service.getSeason3Leaderboard(
-      //     input.channel_id
-      //   )
-      //   return {
-      //     data: season3Data,
-      //     isStale: false,
-      //   }
-      // }
+      if (input.season === 'season2') {
+        // For Season 2, use the snapshot data
+        const season2Data = await service.getSeason2Leaderboard(
+          input.channel_id
+        )
+        return {
+          data: season2Data,
+          isStale: false,
+        }
+      }
+      if (input.season === 'season3') {
+        // For Season 3, use the DB snapshot data
+        const season3Data = await service.getSeason3Leaderboard(
+          input.channel_id
+        )
+        return {
+          data: season3Data,
+          isStale: false,
+        }
+      }
       // For Season 4 (current) or all, use the current data
       const result = await service.getLeaderboard(input.channel_id)
       return {

@@ -41,9 +41,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-  RANKED_QUEUE_ID,
-  SMALLWORLD_QUEUE_ID,
-  VANILLA_QUEUE_ID,
+    OLD_RANKED_CHANNEL, OLD_SMALLWORLD_CHANNEL, OLD_VANILLA_CHANNEL,
+    RANKED_QUEUE_ID,
+    SMALLWORLD_QUEUE_ID,
+    VANILLA_QUEUE_ID,
 } from '@/shared/constants'
 import {
   type Season,
@@ -165,21 +166,21 @@ export function LeaderboardPage() {
     }
   }, [season])
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data (use queue id if season 4, use old channel id otherwise)
   const [rankedLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: RANKED_QUEUE_ID,
+      channel_id: season == 'season4' ? RANKED_QUEUE_ID : OLD_RANKED_CHANNEL,
       season,
     })
 
   const [vanillaLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: VANILLA_QUEUE_ID,
+      channel_id: season == 'season4' ? VANILLA_QUEUE_ID : OLD_VANILLA_CHANNEL,
       season,
     })
   const [smallWorldLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: SMALLWORLD_QUEUE_ID,
+      channel_id: season == 'season4' ? SMALLWORLD_QUEUE_ID : OLD_SMALLWORLD_CHANNEL,
       season,
     })
 
