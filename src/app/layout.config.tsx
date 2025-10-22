@@ -22,10 +22,6 @@ const links = [
     icon: <Trophy />,
   },
   {
-    text: 'Major League Balatro',
-    url: '/major-league-balatro',
-  },
-  {
     text: 'Blog',
     url: '/blog',
     icon: <Rss />,

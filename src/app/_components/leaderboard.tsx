@@ -40,7 +40,12 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import {
+    OLD_RANKED_CHANNEL, OLD_SMALLWORLD_CHANNEL, OLD_VANILLA_CHANNEL,
+    RANKED_QUEUE_ID,
+    SMALLWORLD_QUEUE_ID,
+    VANILLA_QUEUE_ID,
+} from '@/shared/constants'
 import {
   type Season,
   SeasonSchema,
@@ -133,26 +138,26 @@ export function LeaderboardPage() {
   const searchParams = useSearchParams()
   // Get the leaderboard type from URL or default to 'ranked'
   const leaderboardType = searchParams.get('type') || 'ranked'
-  // Get the season from URL or default to 'season3'
+  // Get the season from URL or default to 'season4'
   const seasonParam = searchParams.get('season') as Season | null
   const season =
     seasonParam && SeasonSchema.safeParse(seasonParam).success
       ? seasonParam
-      : 'season3'
+      : 'season4'
   const [gamesAmount, setGamesAmount] = useState([0, 100])
 
   // State for search and sorting
   const [searchQuery, setSearchQuery] = useState('')
   const [sortColumn, setSortColumn] = useState(
-    season === 'season2' ? 'mmr' : 'rank'
+    ['season2', 'season3'].includes(season) ? 'mmr' : 'rank'
   )
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
-    season === 'season2' ? 'desc' : 'asc'
+    ['season2', 'season3'].includes(season) ? 'desc' : 'asc'
   )
 
   // Update sort settings when season changes
   useEffect(() => {
-    if (season === 'season2') {
+    if (['season2', 'season3'].includes(season)) {
       setSortColumn('mmr')
       setSortDirection('desc')
     } else {
@@ -161,16 +166,21 @@ export function LeaderboardPage() {
     }
   }, [season])
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data (use queue id if season 4, use old channel id otherwise)
   const [rankedLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: RANKED_CHANNEL,
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_RANKED_CHANNEL : RANKED_QUEUE_ID,
       season,
     })
 
   const [vanillaLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id: VANILLA_CHANNEL,
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID,
+      season,
+    })
+  const [smallWorldLeaderboardResult] =
+    api.leaderboard.get_leaderboard.useSuspenseQuery({
+      channel_id: (season == 'season2' || season == 'season3') ? OLD_SMALLWORLD_CHANNEL : SMALLWORLD_QUEUE_ID,
       season,
     })
 
@@ -179,8 +189,15 @@ export function LeaderboardPage() {
     () =>
       leaderboardType === 'ranked'
         ? rankedLeaderboardResult
-        : vanillaLeaderboardResult,
-    [leaderboardType, rankedLeaderboardResult, vanillaLeaderboardResult]
+        : leaderboardType === 'vanilla'
+          ? vanillaLeaderboardResult
+          : smallWorldLeaderboardResult,
+    [
+      leaderboardType,
+      rankedLeaderboardResult,
+      vanillaLeaderboardResult,
+      smallWorldLeaderboardResult,
+    ]
   )
 
   const currentLeaderboard = currentLeaderboardResult.data
@@ -288,7 +305,7 @@ export function LeaderboardPage() {
               <AlertTitle>Stale Data</AlertTitle>
               <AlertDescription>
                 The leaderboard data is currently stale due to issues with the
-                neatqueue service. We're showing you the latest available data.
+                botlatro service. We're showing you the latest available data.
                 Please check back later.
               </AlertDescription>
             </Alert>
@@ -302,8 +319,9 @@ export function LeaderboardPage() {
             <div className='mb-6 flex w-full flex-col items-start justify-between gap-4 md:items-center lg:flex-row'>
               <div className='flex flex-col gap-4 md:flex-row md:items-center'>
                 <TabsList className='border border-gray-200 border-b bg-gray-50 dark:border-zinc-800 dark:bg-zinc-800/50'>
-                  <TabsTrigger value='ranked'>Ranked Leaderboard</TabsTrigger>
-                  <TabsTrigger value='vanilla'>Vanilla Leaderboard</TabsTrigger>
+                  <TabsTrigger value='ranked'>Ranked</TabsTrigger>
+                  <TabsTrigger value='vanilla'>Vanilla</TabsTrigger>
+                  <TabsTrigger value='smallworld'>Smallworld</TabsTrigger>
                 </TabsList>
 
                 <div className='flex items-center gap-2'>
@@ -320,6 +338,9 @@ export function LeaderboardPage() {
                       <SelectValue placeholder='Select season' />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value='season4'>
+                        {getSeasonDisplayName('season4')}
+                      </SelectItem>
                       <SelectItem value='season3'>
                         {getSeasonDisplayName('season3')}
                       </SelectItem>

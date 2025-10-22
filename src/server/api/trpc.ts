@@ -145,3 +145,16 @@ export const adminProcedure = t.procedure
       },
     })
   })
+
+export const ownerProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user || ctx.session.user.role !== 'owner') {
+      throw new TRPCError({ code: 'FORBIDDEN' })
+    }
+    return next({
+      ctx: {
+        session: { ...ctx.session, user: ctx.session.user },
+      },
+    })
+  })

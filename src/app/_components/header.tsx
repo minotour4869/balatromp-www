@@ -37,6 +37,7 @@ export function Header({
   const { data: session, status } = useSession()
   const isAuthenticated = status === 'authenticated'
   const isAdmin = isAuthenticated && session?.user?.role === 'admin'
+  const isOwner = isAuthenticated && session?.user?.role === 'owner'
   const navItems = finalLinks.filter((item) =>
     ['nav', 'all'].includes(item.on ?? 'all')
   )
@@ -59,7 +60,7 @@ export function Header({
           .map((item, i) => (
             <NavbarLinkItem key={i} item={item} className='text-sm' />
           ))}
-        {isAdmin && (
+        {(isAdmin || isOwner) && (
           <NavbarMenu>
             <NavbarMenuTrigger className='text-sm'>
               <div className='flex items-center gap-1'>
@@ -68,6 +69,14 @@ export function Header({
               </div>
             </NavbarMenuTrigger>
             <NavbarMenuContent>
+              {isOwner && (
+                <NavbarMenuLink href='/admin/roles'>
+                  <p className='-mb-1 font-medium text-sm'>Role Manager</p>
+                  <p className='text-[13px] text-fd-muted-foreground'>
+                    Assign roles to users
+                  </p>
+                </NavbarMenuLink>
+              )}
               <NavbarMenuLink href='/admin/blog'>
                 <p className='-mb-1 font-medium text-sm'>Blog</p>
                 <p className='text-[13px] text-fd-muted-foreground'>
@@ -200,13 +209,18 @@ export function Header({
               .map((item, i) => (
                 <MenuLinkItem key={i} item={item} className='sm:hidden' />
               ))}
-            {isAdmin && (
+            {(isAdmin || isOwner) && (
               <div className='sm:hidden'>
                 <div className='flex items-center gap-1 px-3 py-2 font-medium'>
                   <Shield className='h-4 w-4' />
                   <span>Admin</span>
                 </div>
                 <div className='ml-4 flex flex-col gap-1'>
+                  {isOwner && (
+                    <Link href='/admin/roles' className='px-3 py-1 text-sm'>
+                      Role Manager
+                    </Link>
+                  )}
                   <Link href='/admin/blog' className='px-3 py-1 text-sm'>
                     Blog
                   </Link>

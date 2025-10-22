@@ -25,7 +25,11 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
+import {
+  RANKED_QUEUE_ID,
+  SMALLWORLD_QUEUE_ID,
+  VANILLA_QUEUE_ID,
+} from '@/shared/constants'
 import {
   type Season,
   filterGamesBySeason,
@@ -40,6 +44,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  GlobeIcon,
   IceCreamCone,
   ShieldHalf,
   Star,
@@ -70,7 +75,7 @@ function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
   const timeZone = useTimeZone()
-  const [season, setSeason] = useState<Season>('season3')
+  const [season, setSeason] = useState<Season>('season4')
 
   const [leaderboardFilter, setLeaderboardFilter] = useState('all')
   const { id } = useParams()
@@ -85,44 +90,50 @@ function UserInfoComponent() {
 
   // Fetch current season data
   const [rankedLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     season,
   })
 
   const [vanillaLeaderboard] = api.leaderboard.get_leaderboard.useSuspenseQuery(
     {
-      channel_id: VANILLA_CHANNEL,
+      channel_id: VANILLA_QUEUE_ID,
       season,
     }
   )
 
   // Fetch current season user rank
   const [vanillaUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: VANILLA_CHANNEL,
+    channel_id: VANILLA_QUEUE_ID,
+    user_id: id,
+    season,
+  })
+  const [smallWorldUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
+    channel_id: SMALLWORLD_QUEUE_ID,
     user_id: id,
     season,
   })
   const [rankedUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season,
   })
 
   // Fetch Season 2 data for historic comparison
   const [rankedUserRankS2Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season: 'season2',
   })
 
   // Fetch Season 3 data for historic comparison
   const [rankedUserRankS3Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season: 'season3',
   })
   const rankedUserRank = rankedUserRankQ?.data
   const vanillaUserRank = vanillaUserRankQ?.data
+  const smallWorldUserRank = smallWorldUserRankQ?.data
 
   // Extract historic data
   const rankedUserRankS2 = rankedUserRankS2Q?.data
@@ -130,7 +141,11 @@ function UserInfoComponent() {
 
   // Determine which historic data to show (opposite of current season)
   const historicRankedData =
-    season === 'season2' ? rankedUserRankS3 : rankedUserRankS2
+    season === 'season2'
+      ? rankedUserRankS3
+      : season === 'season3'
+        ? rankedUserRankS2
+        : rankedUserRankS3
   // Filter games by season
   const seasonFilteredGames = filterGamesBySeason(games, season)
 
@@ -200,6 +215,9 @@ function UserInfoComponent() {
     .at(0)
   const lastVanillaGame = seasonFilteredGames
     .filter((game) => game.gameType.toLowerCase() === 'vanilla')
+    .at(0)
+  const lastSmallworldGame = seasonFilteredGames
+    .filter((game) => game.gameType.toLowerCase() === 'smallworld')
     .at(0)
 
   // Calculate average opponent MMR for meaningful games
@@ -417,44 +435,84 @@ function UserInfoComponent() {
                   accentColor='text-zink-800 dark:text-zink-200'
                 />
               )}
-              {isNonNullish(vanillaUserRank?.mmr) && (
-                <StatsCard
-                  title='Vanilla MMR'
-                  value={Math.round(vanillaUserRank.mmr)}
-                  icon={
-                    <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
-                  }
-                  accentColor='text-zink-800 dark:text-zink-200'
-                  description={
-                    lastVanillaGame ? (
-                      <span
-                        className={cn(
-                          'flex items-center',
-                          lastVanillaGame.mmrChange === 0
-                            ? 'text-zink-800 dark:text-zink-200'
-                            : lastVanillaGame.mmrChange > 0
-                              ? 'text-emerald-500'
-                              : 'text-rose-500'
-                        )}
-                      >
-                        {lastVanillaGame.mmrChange === 0 ? (
-                          'Tied'
-                        ) : lastVanillaGame.mmrChange > 0 ? (
-                          <ChevronUp className='h-3 w-3' />
-                        ) : (
-                          <ChevronDown className='h-3 w-3' />
-                        )}
-                        {lastVanillaGame.mmrChange !== 0
-                          ? numberFormatter.format(
-                              Math.trunc(lastVanillaGame.mmrChange)
-                            )
-                          : null}{' '}
-                        last match
-                      </span>
-                    ) : null
-                  }
-                />
-              )}
+              {isNonNullish(vanillaUserRank?.mmr) &&
+                !Number.isNaN(vanillaUserRank?.mmr) && (
+                  <StatsCard
+                    title='Vanilla MMR'
+                    value={Math.round(vanillaUserRank.mmr)}
+                    icon={
+                      <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
+                    }
+                    accentColor='text-zink-800 dark:text-zink-200'
+                    description={
+                      lastVanillaGame ? (
+                        <span
+                          className={cn(
+                            'flex items-center',
+                            lastVanillaGame.mmrChange === 0
+                              ? 'text-zink-800 dark:text-zink-200'
+                              : lastVanillaGame.mmrChange > 0
+                                ? 'text-emerald-500'
+                                : 'text-rose-500'
+                          )}
+                        >
+                          {lastVanillaGame.mmrChange === 0 ? (
+                            'Tied'
+                          ) : lastVanillaGame.mmrChange > 0 ? (
+                            <ChevronUp className='h-3 w-3' />
+                          ) : (
+                            <ChevronDown className='h-3 w-3' />
+                          )}
+                          {lastVanillaGame.mmrChange !== 0
+                            ? numberFormatter.format(
+                                Math.trunc(lastVanillaGame.mmrChange)
+                              )
+                            : null}{' '}
+                          last match
+                        </span>
+                      ) : null
+                    }
+                  />
+                )}
+              {isNonNullish(smallWorldUserRank?.mmr) &&
+                !Number.isNaN(smallWorldUserRank?.mmr) && (
+                  <StatsCard
+                    title='Smallworld MMR'
+                    value={Math.round(smallWorldUserRank.mmr)}
+                    icon={
+                      <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
+                    }
+                    accentColor='text-zink-800 dark:text-zink-200'
+                    description={
+                      lastSmallworldGame ? (
+                        <span
+                          className={cn(
+                            'flex items-center',
+                            lastSmallworldGame.mmrChange === 0
+                              ? 'text-zink-800 dark:text-zink-200'
+                              : lastSmallworldGame.mmrChange > 0
+                                ? 'text-emerald-500'
+                                : 'text-rose-500'
+                          )}
+                        >
+                          {lastSmallworldGame.mmrChange === 0 ? (
+                            'Tied'
+                          ) : lastSmallworldGame.mmrChange > 0 ? (
+                            <ChevronUp className='h-3 w-3' />
+                          ) : (
+                            <ChevronDown className='h-3 w-3' />
+                          )}
+                          {lastSmallworldGame.mmrChange !== 0
+                            ? numberFormatter.format(
+                                Math.trunc(lastSmallworldGame.mmrChange)
+                              )
+                            : null}{' '}
+                          last match
+                        </span>
+                      ) : null
+                    }
+                  />
+                )}
               <StatsCard
                 title='Avg Opponent MMR'
                 value={Math.round(avgOpponentMmr)}
@@ -505,6 +563,9 @@ function UserInfoComponent() {
                     <SelectValue placeholder='Season' />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value='season4'>
+                      {getSeasonDisplayName('season4')}
+                    </SelectItem>
                     <SelectItem value='season3'>
                       {getSeasonDisplayName('season3')}
                     </SelectItem>

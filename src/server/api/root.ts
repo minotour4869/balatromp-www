@@ -7,6 +7,7 @@ import { playerStateRouter } from '@/server/api/routers/player-state'
 import { profileRouter } from '@/server/api/routers/profile'
 import { releasesRouter } from '@/server/api/routers/releases'
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc'
+import { usersRouter } from '@/server/api/routers/users'
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   playerState: playerStateRouter,
   profile: profileRouter,
   releases: releasesRouter,
+  users: usersRouter,
 })
 
 // export type definition of API
