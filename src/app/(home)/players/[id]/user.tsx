@@ -549,6 +549,7 @@ function UserInfoComponent() {
                     <SelectItem value='all'>All Leaderboards</SelectItem>
                     <SelectItem value='ranked'>Ranked</SelectItem>
                     <SelectItem value='vanilla'>Vanilla</SelectItem>
+                    <SelectItem value='smallworld'>Smallworld</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
