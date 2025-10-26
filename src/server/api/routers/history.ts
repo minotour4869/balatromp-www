@@ -1,11 +1,12 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
-import { neatqueue_service } from '@/server/services/botlatro.service'
+import { botlatro_service } from '@/server/services/botlatro.service'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 
 export const history_router = createTRPCRouter({
   getTranscript: publicProcedure
@@ -15,7 +16,7 @@ export const history_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      return await neatqueue_service.get_transcript(input.gameNumber)
+      return await botlatro_service.get_transcript(input.gameNumber)
     }),
   games_per_hour: publicProcedure
     .input(
@@ -114,30 +115,37 @@ export const history_router = createTRPCRouter({
         .where(eq(player_games.playerId, input.user_id))
         .orderBy(desc(player_games.gameNum))
     }),
-  sync: publicProcedure.mutation(async () => {
-    return syncHistory()
-  }),
+  sync: publicProcedure
+    .input(
+      z.object({
+        queue_id: z.string().default(RANKED_QUEUE_ID),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return syncHistory(input.queue_id)
+    }),
   syncByDateRange: publicProcedure
     .input(
       z.object({
+        queue_id: z.string().default(RANKED_QUEUE_ID),
         start_date: z.string().optional(),
         end_date: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      return syncHistoryByDateRange(input.start_date, input.end_date)
+      return syncHistoryByDateRange(input.queue_id, input.start_date, input.end_date)
     }),
 })
 
-export async function syncHistory() {
+export async function syncHistory(queue_id: string) {
   const cursor = await db
     .select()
     .from(metadata)
-    .where(eq(metadata.key, 'history_cursor'))
+    .where(eq(metadata.key, `history_cursor_${queue_id}`))
     .limit(1)
     .then((res) => res[0])
   const data = await ky
-    .get('https://api.neatqueue.com/api/history/1226193436521267223', {
+    .get(`http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`, {
       searchParams: {
         start_game_number: cursor?.value ?? 1,
       },
@@ -145,7 +153,7 @@ export async function syncHistory() {
     })
     .json<any>()
   const matches = await fetch(
-    'https://api.neatqueue.com/api/matches/1226193436521267223'
+    `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`
   ).then((res) => res.json())
   const firstGame = Object.keys(matches).sort(
     (a, b) => Number.parseInt(a) - Number.parseInt(b)
@@ -156,7 +164,7 @@ export async function syncHistory() {
   }
   if (firstGame === 'detail') {
     await db.insert(metadata).values({
-      key: 'history_cursor_failure',
+      key: `history_cursor_failure_${queue_id}`,
       value: JSON.stringify(matches),
     })
     throw new Error('Something went wrong')
@@ -164,13 +172,13 @@ export async function syncHistory() {
   await db
     .insert(metadata)
     .values({
-      key: 'history_cursor',
+      key: `history_cursor_${queue_id}`,
       value: firstGame,
     })
     .onConflictDoUpdate({
       target: metadata.key,
       set: {
-        key: 'history_cursor',
+        key: `history_cursor_${queue_id}`,
         value: firstGame,
       },
     })
@@ -185,6 +193,7 @@ export async function syncHistory() {
 }
 
 export async function syncHistoryByDateRange(
+  queue_id: string,
   start_date?: string,
   end_date?: string
 ) {
@@ -199,7 +208,7 @@ export async function syncHistoryByDateRange(
   }
 
   const response = await ky.get(
-    'https://api.neatqueue.com/api/history/1226193436521267223',
+    `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
     {
       searchParams,
       timeout: 1000000,

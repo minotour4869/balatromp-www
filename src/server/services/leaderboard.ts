@@ -1,5 +1,5 @@
 import { redis } from '../redis'
-import { type LeaderboardEntry, neatqueue_service } from './botlatro.service'
+import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
 import { db } from '@/server/db'
 import { leaderboardSnapshots, metadata } from '@/server/db/schema'
 import { eq, desc, and, gte, lt } from 'drizzle-orm'
@@ -187,7 +187,7 @@ export class LeaderboardService {
 
   async refreshLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
     try {
-      const fresh = await neatqueue_service.get_leaderboard(queue_id)
+      const fresh = await botlatro_service.get_leaderboard(queue_id)
       const zsetKey = this.getZSetKey(queue_id)
       const rawKey = this.getRawKey(queue_id)
       const backupKey = this.getBackupKey(queue_id)
