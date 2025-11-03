@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       case 'MATCH_COMPLETED': {
         const playerIds = payload.teams.map((p: any) => p[0].id) as string[]
         console.log({ playerIds })
-        await syncHistory()
+        await syncHistory(RANKED_QUEUE_ID)
         await Promise.allSettled(
           [RANKED_QUEUE_ID].map((id) =>
             leaderboardService.refreshLeaderboard(id)

@@ -281,12 +281,12 @@ export class LeaderboardService {
       const cached = await redis.get(this.getRawKey(queue_id))
       if (cached) return { data: JSON.parse(cached) as LeaderboardEntry[], isStale: false }
 
-      // If not in cache, try to refresh from neatqueue
+      // If not in cache, try to refresh from botlatro
       return await this.refreshLeaderboard(queue_id)
     } catch (error) {
-      console.error('Error getting leaderboard from neatqueue:', error)
+      console.error('Error getting leaderboard from botlatro:', error)
 
-      // If neatqueue fails, try to get the latest backup from the database
+      // If botlatro fails, try to get the latest backup from the database
       const backupKey = this.getBackupKey(queue_id)
       const backup = await db
         .select()

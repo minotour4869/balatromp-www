@@ -106,13 +106,14 @@ export const history_router = createTRPCRouter({
     .input(
       z.object({
         user_id: z.string(),
+        queue_id: z.string().default(RANKED_QUEUE_ID),
       })
     )
     .query(async ({ ctx, input }) => {
       return await ctx.db
         .select()
         .from(player_games)
-        .where(eq(player_games.playerId, input.user_id))
+        .where(and(eq(player_games.playerId, input.user_id), eq(player_games.queueId, input.queue_id)))
         .orderBy(desc(player_games.gameNum))
     }),
   sync: publicProcedure
@@ -146,9 +147,6 @@ export async function syncHistory(queue_id: string) {
     .then((res) => res[0])
   const data = await ky
     .get(`http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`, {
-      searchParams: {
-        start_game_number: cursor?.value ?? 1,
-      },
       timeout: 60000,
     })
     .json<any>()
@@ -183,9 +181,9 @@ export async function syncHistory(queue_id: string) {
       },
     })
 
-  const chunkedData = chunk(data.data, 100)
+  const chunkedData = chunk(data.matches, 100)
   for (const chunk of chunkedData) {
-    await insertGameHistory(chunk).catch((e) => {
+    await insertGameHistory(chunk, queue_id).catch((e) => {
       console.error(e)
     })
   }
@@ -219,37 +217,31 @@ export async function syncHistoryByDateRange(
 
   const chunkedData = chunk(data.data, 100)
   for (const chunk of chunkedData) {
-    await insertGameHistory(chunk).catch((e) => {
+    await insertGameHistory(chunk, queue_id).catch((e) => {
       console.error(e)
     })
   }
   return data
 }
 
-function processGameEntry(gameId: number, game_num: number, entry: any) {
+function processGameEntry(gameId: number, game_num: number, entry: any, queue_id: string) {
   const parsedEntry = typeof entry === 'string' ? JSON.parse(entry) : entry
-  if (parsedEntry.game === '1v1-attrition') {
-    return []
-  }
-  if (!parsedEntry.teams?.[0]?.[0] || !parsedEntry.teams?.[1]?.[0]) {
+  if (!parsedEntry.winning_team) {
     return []
   }
 
-  if (parsedEntry.winner === -2) {
+  if (!parsedEntry.players[0].user_id || !parsedEntry.players[1].user_id) {
     return []
   }
-  const player0 = parsedEntry.teams[0][0]
-  const player1 = parsedEntry.teams[1][0]
+
+  const player0 = parsedEntry.players[0]
+  const player1 = parsedEntry.players[1]
   let p0result = null
   let p1result = null
-
-  if (parsedEntry.winner === 2) {
-    p0result = 'tie'
-    p1result = 'tie'
-  } else if (parsedEntry.winner === 0) {
+  if (parsedEntry.winner === 1) {
     p0result = 'win'
     p1result = 'loss'
-  } else if (parsedEntry.winner === 1) {
+  } else if (parsedEntry.winner === 2) {
     p0result = 'loss'
     p1result = 'win'
   } else {
@@ -260,41 +252,41 @@ function processGameEntry(gameId: number, game_num: number, entry: any) {
     {
       gameId,
       gameNum: game_num,
-      gameTime: new Date(parsedEntry.time),
-      gameType: parsedEntry.game,
-      mmrChange: Number.parseFloat(player0.mmr_change),
-      opponentId: player1.id,
-      opponentMmr: Number.parseFloat(player1.mmr),
-      opponentName: player1.name,
-      playerId: player0.id,
-      playerMmr: Number.parseFloat(player0.mmr),
-      playerName: player0.name,
+      queueId: queue_id,
+      gameTime: new Date(parsedEntry.created_at),
+      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      mmrChange: Number.parseFloat(player0.elo_change),
+      opponentId: player1.user_id,
+      opponentMmr: 350.0, //Number.parseFloat(player1.mmr),
+      opponentName: 'test 1',
+      playerId: player0.user_id,
+      playerMmr: 400.0, //Number.parseFloat(player0.mmr),
+      playerName: 'test 0',
       result: p0result,
-      won: parsedEntry.winner === 0,
     },
     {
       gameId,
       gameNum: game_num,
-      gameTime: new Date(parsedEntry.time),
-      gameType: parsedEntry.game,
-      mmrChange: Number.parseFloat(player1.mmr_change),
-      opponentId: player0.id,
-      opponentMmr: Number.parseFloat(player0.mmr),
-      opponentName: player0.name,
-      playerId: player1.id,
-      playerMmr: Number.parseFloat(player1.mmr),
-      playerName: player1.name,
+      queueId: queue_id,
+      gameTime: new Date(parsedEntry.created_at),
+      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      mmrChange: Number.parseFloat(player1.elo_change),
+      opponentId: player0.user_id,
+      opponentMmr: 400.0, //Number.parseFloat(player1.mmr),
+      opponentName: 'test 0',
+      playerId: player1.user_id,
+      playerMmr: 350.0, //Number.parseFloat(player0.mmr),
+      playerName: 'test 1',
       result: p1result,
-      won: parsedEntry.winner === 1,
     },
   ]
 }
-export async function insertGameHistory(entries: any[]) {
+export async function insertGameHistory(entries: any[], queue_id: string) {
   const rawResults = await Promise.all(
     entries.map(async (entry) => {
       return db
         .insert(raw_history)
-        .values({ entry, game_num: entry.game_num })
+        .values({ entry, game_num: entry.match_id })
         .returning()
         .onConflictDoUpdate({
           target: raw_history.game_num,
@@ -307,7 +299,7 @@ export async function insertGameHistory(entries: any[]) {
   ).then((res) => res.filter(Boolean))
 
   const playerGameRows = rawResults.flatMap(({ entry, id, game_num }: any) => {
-    return processGameEntry(id, game_num, entry)
+    return processGameEntry(id, game_num, entry, queue_id)
   })
 
   await Promise.all(

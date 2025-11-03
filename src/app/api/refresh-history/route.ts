@@ -1,5 +1,6 @@
 import { env } from '@/env'
 import { syncHistory } from '@/server/api/routers/history'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { headers } from 'next/headers'
 
 const SECURE_TOKEN = env.CRON_SECRET
@@ -15,7 +16,7 @@ export async function POST() {
   try {
     try {
       console.log('refreshing history...')
-      await syncHistory()
+      await syncHistory(RANKED_QUEUE_ID)
     } catch (err) {
       console.error('history refresh failed:', err)
       return new Response('internal error', { status: 500 })

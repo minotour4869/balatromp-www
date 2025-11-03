@@ -1,5 +1,6 @@
 import { env } from '@/env'
 import { syncHistoryByDateRange } from '@/server/api/routers/history'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { headers } from 'next/headers'
 
 const SECURE_TOKEN = env.CRON_SECRET
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
         console.log(`End date: ${endDate}`)
       }
 
-      await syncHistoryByDateRange(startDate, endDate)
+      await syncHistoryByDateRange(RANKED_QUEUE_ID, startDate, endDate)
     } catch (err) {
       console.error('history refresh by date range failed:', err)
       return new Response('internal error', { status: 500 })

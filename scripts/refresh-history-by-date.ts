@@ -1,4 +1,5 @@
 import { syncHistoryByDateRange } from '@/server/api/routers/history'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 
 async function refreshHistoryByDate(startDate?: string, endDate?: string) {
   try {
@@ -9,8 +10,8 @@ async function refreshHistoryByDate(startDate?: string, endDate?: string) {
     if (endDate) {
       console.log(`End date: ${endDate}`)
     }
-    
-    await syncHistoryByDateRange(startDate, endDate)
+
+    await syncHistoryByDateRange(RANKED_QUEUE_ID, startDate, endDate)
     console.log('History refresh completed successfully')
   } catch (err) {
     console.error('History refresh failed:', err)
