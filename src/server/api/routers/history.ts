@@ -150,10 +150,7 @@ export async function syncHistory(queue_id: string) {
       timeout: 60000,
     })
     .json<any>()
-  const matches = await fetch(
-    `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`
-  ).then((res) => res.json())
-  const firstGame = Object.keys(matches).sort(
+  const firstGame = Object.keys(data).sort(
     (a, b) => Number.parseInt(a) - Number.parseInt(b)
   )[0]
 
@@ -163,7 +160,7 @@ export async function syncHistory(queue_id: string) {
   if (firstGame === 'detail') {
     await db.insert(metadata).values({
       key: `history_cursor_failure_${queue_id}`,
-      value: JSON.stringify(matches),
+      value: JSON.stringify(data),
     })
     throw new Error('Something went wrong')
   }
