@@ -1306,7 +1306,7 @@ export default function LogParser() {
                                           }
                                         >
                                           <Image
-                                            src={`/cards/${jokerName}.png`}
+                                            src={`/cards/${jokerName}.${jokerName === 'j_hologram' ? 'gif' : 'png'}`}
                                             alt={cleanName}
                                             width={142}
                                             height={190}
@@ -1347,7 +1347,7 @@ export default function LogParser() {
                                           }
                                         >
                                           <Image
-                                            src={`/cards/${jokerName}.png`}
+                                            src={`/cards/${jokerName}.${jokerName === 'j_hologram' ? 'gif' : 'png'}`}
                                             alt={cleanName}
                                             width={142}
                                             height={190}
