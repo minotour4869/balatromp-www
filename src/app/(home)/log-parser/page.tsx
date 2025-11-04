@@ -1376,7 +1376,7 @@ export default function LogParser() {
                                 {ownerLabel}
                                 {game.winner === 'logOwner' ? ' 🏆' : ''}:
                               </strong>
-                              {game.logOwnerVouchers.length > 0 ? (
+                              {game.logOwnerVouchers?.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.logOwnerVouchers.map((voucher, i) => {
                                     if (!voucher) {
@@ -1416,7 +1416,7 @@ export default function LogParser() {
                                 {opponentLabel}
                                 {game.winner === 'opponent' ? ' 🏆' : ''}:
                               </strong>
-                              {game.opponentVouchers.length > 0 ? (
+                              {game.opponentVouchers?.length > 0 ? (
                                 <ul className='mt-3 ml-4 flex list-inside gap-3'>
                                   {game.opponentVouchers.map((voucher, i) => {
                                     if (!voucher) {
