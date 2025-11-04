@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
     const session = await auth()
-    if (!session || session.user.role !== 'admin') {
+    if (!session || !['admin', 'owner'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -135,7 +135,10 @@ export const protectedProcedure = t.procedure
 export const adminProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.session?.user || ctx.session.user.role !== 'admin') {
+    if (
+      !ctx.session?.user ||
+      !['owner', 'admin'].includes(ctx.session.user.role)
+    ) {
       throw new TRPCError({ code: 'FORBIDDEN' })
     }
     return next({

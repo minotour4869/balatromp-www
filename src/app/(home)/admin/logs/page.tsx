@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 
 export default async function LogsPage() {
   const session = await auth()
-  const isAdmin = session?.user.role === 'admin'
+  const isAdmin = ['owner', 'admin'].includes(session?.user.role ?? '')
 
   if (!isAdmin) {
     return (

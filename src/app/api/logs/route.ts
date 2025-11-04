@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       // Allow access if user is admin or the owner of the log file
       if (
         !session ||
-        (session.user.role !== 'admin' &&
+        (!['admin', 'owner'].includes(session.user.role) &&
           logFile?.[0]?.userId !== session.user.id)
       ) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(logFile[0])
     }
     // Fetching all log files (admin only)
-    if (!session || session.user.role !== 'admin') {
+    if (!session || !['admin', 'owner'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -82,7 +82,7 @@ export async function DELETE(req: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
     const session = await auth()
-    if (!session || session.user.role !== 'admin') {
+    if (!session || !['admin', 'owner'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

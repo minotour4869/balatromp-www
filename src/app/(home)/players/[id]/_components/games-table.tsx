@@ -48,7 +48,7 @@ const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
   const format = useFormatter()
   const timeZone = useTimeZone()
   const session = useSession()
-  const isAdmin = session.data?.user.role === 'admin'
+  const isAdmin = ['admin', 'owner'].includes(session.data?.user.role ?? '')
   return useMemo(
     () => [
       columnHelper.accessor('opponentName', {
