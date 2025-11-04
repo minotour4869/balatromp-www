@@ -5,7 +5,7 @@ import { Suspense } from 'react'
 
 export default async function ReleasesPage() {
   const session = await auth()
-  const isAdmin =  ['owner', 'admin'].includes(session?.user.role)
+  const isAdmin = ['owner', 'admin'].includes(session?.user.role ?? '')
   console.log(session)
   if (!isAdmin) {
     return (
