@@ -26,9 +26,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-  RANKED_QUEUE_ID,
-  SMALLWORLD_QUEUE_ID,
-  VANILLA_QUEUE_ID,
+    OLD_RANKED_CHANNEL,
+    RANKED_QUEUE_ID,
+    SMALLWORLD_QUEUE_ID,
+    VANILLA_QUEUE_ID,
 } from '@/shared/constants'
 import {
   type Season,
@@ -120,14 +121,14 @@ function UserInfoComponent() {
 
   // Fetch Season 2 data for historic comparison
   const [rankedUserRankS2Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_QUEUE_ID,
+    channel_id: OLD_RANKED_CHANNEL,
     user_id: id,
     season: 'season2',
   })
 
   // Fetch Season 3 data for historic comparison
   const [rankedUserRankS3Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
-    channel_id: RANKED_QUEUE_ID,
+    channel_id: OLD_RANKED_CHANNEL,
     user_id: id,
     season: 'season3',
   })
@@ -589,10 +590,6 @@ function UserInfoComponent() {
                   <SelectItem value='all'>All Games</SelectItem>
                   <SelectItem value='wins'>Wins</SelectItem>
                   <SelectItem value='losses'>Losses</SelectItem>
-                  <SelectItem value='ties'>Ties</SelectItem>
-                  <SelectItem value='wins-and-losses'>
-                    Wins and Losses
-                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
