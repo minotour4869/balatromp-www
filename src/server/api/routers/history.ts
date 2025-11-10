@@ -223,28 +223,27 @@ export async function syncHistoryByDateRange(
 
 function processGameEntry(gameId: number, game_num: number, entry: any, queue_id: string) {
   const parsedEntry = typeof entry === 'string' ? JSON.parse(entry) : entry
+
+  // Validate required fields
   if (!parsedEntry.winning_team) {
     return []
   }
 
-  if (!parsedEntry.players[0].user_id || !parsedEntry.players[1].user_id) {
+  if (!parsedEntry.players || parsedEntry.players.length < 2) {
+    return []
+  }
+
+  if (!parsedEntry.players[0]?.user_id || !parsedEntry.players[1]?.user_id) {
     return []
   }
 
   const player0 = parsedEntry.players[0]
   const player1 = parsedEntry.players[1]
-  let p0result = null
-  let p1result = null
-  if (parsedEntry.winner === 1) {
-    p0result = 'win'
-    p1result = 'loss'
-  } else if (parsedEntry.winner === 2) {
-    p0result = 'loss'
-    p1result = 'win'
-  } else {
-    p0result = 'unknown'
-    p1result = 'unknown'
-  }
+
+  // Determine results based on winning_team
+  const p0result = parsedEntry.winning_team === player0.team ? 'win' : 'loss'
+  const p1result = parsedEntry.winning_team === player1.team ? 'win' : 'loss'
+
   return [
     {
       gameId,
@@ -252,14 +251,15 @@ function processGameEntry(gameId: number, game_num: number, entry: any, queue_id
       queueId: queue_id,
       gameTime: new Date(parsedEntry.created_at),
       gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
-      mmrChange: Number.parseFloat(player0.elo_change),
+      mmrChange: Number.parseFloat(player0.elo_change ?? 0),
       opponentId: player1.user_id,
-      opponentMmr: 350.0, //Number.parseFloat(player1.mmr),
-      opponentName: 'test 1',
+      opponentMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
+      opponentName: player1.name ?? 'Unknown',
       playerId: player0.user_id,
-      playerMmr: 400.0, //Number.parseFloat(player0.mmr),
-      playerName: 'test 0',
+      playerMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
+      playerName: player0.name ?? 'Unknown',
       result: p0result,
+      won: parsedEntry.winning_team === player0.team,
     },
     {
       gameId,
@@ -267,14 +267,15 @@ function processGameEntry(gameId: number, game_num: number, entry: any, queue_id
       queueId: queue_id,
       gameTime: new Date(parsedEntry.created_at),
       gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
-      mmrChange: Number.parseFloat(player1.elo_change),
+      mmrChange: Number.parseFloat(player1.elo_change ?? 0),
       opponentId: player0.user_id,
-      opponentMmr: 400.0, //Number.parseFloat(player1.mmr),
-      opponentName: 'test 0',
+      opponentMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
+      opponentName: player0.name ?? 'Unknown',
       playerId: player1.user_id,
-      playerMmr: 350.0, //Number.parseFloat(player0.mmr),
-      playerName: 'test 1',
+      playerMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
+      playerName: player1.name ?? 'Unknown',
       result: p1result,
+      won: parsedEntry.winning_team === player1.team,
     },
   ]
 }

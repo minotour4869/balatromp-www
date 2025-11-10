@@ -254,7 +254,7 @@ export class LeaderboardService {
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
 
-      // If neatqueue fails, try to get the latest backup from the database
+      // If botlatro fails, try to get the latest backup from the database
       const backupKey = this.getBackupKey(queue_id)
       const backup = await db
         .select()

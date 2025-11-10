@@ -129,8 +129,8 @@ export const botlatro_service = {
 }
 
 export type LeaderboardEntry = {
-  id: string
-  name: string
+    id: string
+    name: string
     mmr: number
     wins: number
     losses: number
@@ -150,28 +150,44 @@ export type LeaderboardResponse = {
 
 export type MatchHistoryEntry = {
   match_id: number
+  player_name: string
+  mmr_after: number
   won: boolean
-  elo_change: number | null
-  team: number | null
+  elo_change: number
+  team: number
+  opponents: Array<{
+    user_id: string
+    name: string
+    team: number
+    elo_change: number
+    mmr_after: number
+  }>
   deck: string | null
   stake: string | null
   best_of_3: boolean
   best_of_5: boolean
   created_at: string
-  winning_team: number | null
+  winning_team: number
 }
 
 export type OverallMatchHistoryEntry = {
-  match_id: number
-  winning_team: number | null
-  deck: string | null
-  stake: string | null
-  best_of_3: boolean
-  best_of_5: boolean
-  created_at: string
-  players: Array<{
-    user_id: string
-    team: number | null
-    elo_change: number | null
-  }>
+    match_id: number
+    player_name: string
+    mmr_after: number
+    won: boolean
+    elo_change: number
+    team: number
+    opponents: Array<{
+        user_id: string
+        name: string
+        team: number
+        elo_change: number
+        mmr_after: number
+    }>
+    deck: string | null
+    stake: string | null
+    best_of_3: boolean
+    best_of_5: boolean
+    created_at: string
+    winning_team: number
 }
