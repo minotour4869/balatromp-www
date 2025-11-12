@@ -31,6 +31,7 @@ export const player_games = pgTable(
   'player_games',
   {
     playerId: text('player_id').notNull(),
+    queueId: text('queue_id').notNull(),
     playerName: text('player_name').notNull(),
     gameId: integer('game_id').notNull(),
     gameTime: timestamp('game_time').notNull(),

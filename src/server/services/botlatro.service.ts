@@ -14,7 +14,7 @@ const instance = ky.create({
 
 export const TRANSCRIPT_CACHE_KEY = (gameNumber: number) => `transcript:${gameNumber}`
 
-export const neatqueue_service = {
+export const botlatro_service = {
   get_leaderboard: async (queue_id: string) => {
     const res = await instance
       .get(`leaderboard/${queue_id}?limit=100000`)
@@ -39,13 +39,20 @@ export const neatqueue_service = {
     return fixed
   },
 
-  get_history: async (player_ids: string[], queue_id: number) => {
+  get_history: async (player_ids: string[], queue_id: number, limit?: number) => {
     const results: Record<string, MatchHistoryEntry[]> = {}
 
     for (const user_id of player_ids) {
       try {
+        const searchParams: Record<string, string> = {}
+        if (limit) {
+          searchParams.limit = limit.toString()
+        }
+
         const response = await instance
-          .get(`history/${user_id}/${queue_id}`)
+          .get(`history/${user_id}/${queue_id}`, {
+            searchParams,
+          })
           .json<{ matches: MatchHistoryEntry[] }>()
 
         results[user_id] = response.matches
@@ -56,6 +63,26 @@ export const neatqueue_service = {
     }
 
     return results
+  },
+
+  get_overall_history: async (queue_id: number, limit?: number) => {
+    try {
+      const searchParams: Record<string, string> = {}
+      if (limit) {
+        searchParams.limit = limit.toString()
+      }
+
+      const response = await instance
+        .get(`overall-history/${queue_id}`, {
+          searchParams,
+        })
+        .json<{ matches: OverallMatchHistoryEntry[] }>()
+
+      return response.matches
+    } catch (error) {
+      console.error(`Error fetching overall history for queue ${queue_id}:`, error)
+      return []
+    }
   },
 
   get_transcript: async (gameNumber: number) => {
@@ -102,8 +129,8 @@ export const neatqueue_service = {
 }
 
 export type LeaderboardEntry = {
-  id: string
-  name: string
+    id: string
+    name: string
     mmr: number
     wins: number
     losses: number
@@ -123,13 +150,44 @@ export type LeaderboardResponse = {
 
 export type MatchHistoryEntry = {
   match_id: number
+  player_name: string
+  mmr_after: number
   won: boolean
   elo_change: number
   team: number
+  opponents: Array<{
+    user_id: string
+    name: string
+    team: number
+    elo_change: number
+    mmr_after: number
+  }>
   deck: string | null
   stake: string | null
   best_of_3: boolean
   best_of_5: boolean
   created_at: string
   winning_team: number
+}
+
+export type OverallMatchHistoryEntry = {
+    match_id: number
+    player_name: string
+    mmr_after: number
+    won: boolean
+    elo_change: number
+    team: number
+    opponents: Array<{
+        user_id: string
+        name: string
+        team: number
+        elo_change: number
+        mmr_after: number
+    }>
+    deck: string | null
+    stake: string | null
+    best_of_3: boolean
+    best_of_5: boolean
+    created_at: string
+    winning_team: number
 }

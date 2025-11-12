@@ -1,11 +1,12 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
-import { neatqueue_service } from '@/server/services/botlatro.service'
+import { botlatro_service } from '@/server/services/botlatro.service'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 
 export const history_router = createTRPCRouter({
   getTranscript: publicProcedure
@@ -15,7 +16,7 @@ export const history_router = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      return await neatqueue_service.get_transcript(input.gameNumber)
+      return await botlatro_service.get_transcript(input.gameNumber)
     }),
   games_per_hour: publicProcedure
     .input(
@@ -105,49 +106,51 @@ export const history_router = createTRPCRouter({
     .input(
       z.object({
         user_id: z.string(),
+        queue_id: z.string().default(RANKED_QUEUE_ID),
       })
     )
     .query(async ({ ctx, input }) => {
       return await ctx.db
         .select()
         .from(player_games)
-        .where(eq(player_games.playerId, input.user_id))
+        .where(and(eq(player_games.playerId, input.user_id), eq(player_games.queueId, input.queue_id)))
         .orderBy(desc(player_games.gameNum))
     }),
-  sync: publicProcedure.mutation(async () => {
-    return syncHistory()
-  }),
+  sync: publicProcedure
+    .input(
+      z.object({
+        queue_id: z.string().default(RANKED_QUEUE_ID),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return syncHistory(input.queue_id)
+    }),
   syncByDateRange: publicProcedure
     .input(
       z.object({
+        queue_id: z.string().default(RANKED_QUEUE_ID),
         start_date: z.string().optional(),
         end_date: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      return syncHistoryByDateRange(input.start_date, input.end_date)
+      return syncHistoryByDateRange(input.queue_id, input.start_date, input.end_date)
     }),
 })
 
-export async function syncHistory() {
+export async function syncHistory(queue_id: string) {
   const cursor = await db
     .select()
     .from(metadata)
-    .where(eq(metadata.key, 'history_cursor'))
+    .where(eq(metadata.key, `history_cursor_${queue_id}`))
     .limit(1)
     .then((res) => res[0])
   const data = await ky
-    .get('https://api.neatqueue.com/api/history/1226193436521267223', {
-      searchParams: {
-        start_game_number: cursor?.value ?? 1,
-      },
+    .get(`http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`, {
       timeout: 60000,
     })
     .json<any>()
-  const matches = await fetch(
-    'https://api.neatqueue.com/api/matches/1226193436521267223'
-  ).then((res) => res.json())
-  const firstGame = Object.keys(matches).sort(
+  const firstGame = Object.keys(data).sort(
     (a, b) => Number.parseInt(a) - Number.parseInt(b)
   )[0]
 
@@ -156,28 +159,28 @@ export async function syncHistory() {
   }
   if (firstGame === 'detail') {
     await db.insert(metadata).values({
-      key: 'history_cursor_failure',
-      value: JSON.stringify(matches),
+      key: `history_cursor_failure_${queue_id}`,
+      value: JSON.stringify(data),
     })
     throw new Error('Something went wrong')
   }
   await db
     .insert(metadata)
     .values({
-      key: 'history_cursor',
+      key: `history_cursor_${queue_id}`,
       value: firstGame,
     })
     .onConflictDoUpdate({
       target: metadata.key,
       set: {
-        key: 'history_cursor',
+        key: `history_cursor_${queue_id}`,
         value: firstGame,
       },
     })
 
-  const chunkedData = chunk(data.data, 100)
+  const chunkedData = chunk(data.matches, 100)
   for (const chunk of chunkedData) {
-    await insertGameHistory(chunk).catch((e) => {
+    await insertGameHistory(chunk, queue_id).catch((e) => {
       console.error(e)
     })
   }
@@ -185,6 +188,7 @@ export async function syncHistory() {
 }
 
 export async function syncHistoryByDateRange(
+  queue_id: string,
   start_date?: string,
   end_date?: string
 ) {
@@ -199,7 +203,7 @@ export async function syncHistoryByDateRange(
   }
 
   const response = await ky.get(
-    'https://api.neatqueue.com/api/history/1226193436521267223',
+    `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
     {
       searchParams,
       timeout: 1000000,
@@ -210,82 +214,77 @@ export async function syncHistoryByDateRange(
 
   const chunkedData = chunk(data.data, 100)
   for (const chunk of chunkedData) {
-    await insertGameHistory(chunk).catch((e) => {
+    await insertGameHistory(chunk, queue_id).catch((e) => {
       console.error(e)
     })
   }
   return data
 }
 
-function processGameEntry(gameId: number, game_num: number, entry: any) {
+function processGameEntry(gameId: number, game_num: number, entry: any, queue_id: string) {
   const parsedEntry = typeof entry === 'string' ? JSON.parse(entry) : entry
-  if (parsedEntry.game === '1v1-attrition') {
-    return []
-  }
-  if (!parsedEntry.teams?.[0]?.[0] || !parsedEntry.teams?.[1]?.[0]) {
+
+  // Validate required fields
+  if (!parsedEntry.winning_team) {
     return []
   }
 
-  if (parsedEntry.winner === -2) {
+  if (!parsedEntry.players || parsedEntry.players.length < 2) {
     return []
   }
-  const player0 = parsedEntry.teams[0][0]
-  const player1 = parsedEntry.teams[1][0]
-  let p0result = null
-  let p1result = null
 
-  if (parsedEntry.winner === 2) {
-    p0result = 'tie'
-    p1result = 'tie'
-  } else if (parsedEntry.winner === 0) {
-    p0result = 'win'
-    p1result = 'loss'
-  } else if (parsedEntry.winner === 1) {
-    p0result = 'loss'
-    p1result = 'win'
-  } else {
-    p0result = 'unknown'
-    p1result = 'unknown'
+  if (!parsedEntry.players[0]?.user_id || !parsedEntry.players[1]?.user_id) {
+    return []
   }
+
+  const player0 = parsedEntry.players[0]
+  const player1 = parsedEntry.players[1]
+
+  // Determine results based on winning_team
+  const p0result = parsedEntry.winning_team === player0.team ? 'win' : 'loss'
+  const p1result = parsedEntry.winning_team === player1.team ? 'win' : 'loss'
+
   return [
     {
       gameId,
       gameNum: game_num,
-      gameTime: new Date(parsedEntry.time),
-      gameType: parsedEntry.game,
-      mmrChange: Number.parseFloat(player0.mmr_change),
-      opponentId: player1.id,
-      opponentMmr: Number.parseFloat(player1.mmr),
-      opponentName: player1.name,
-      playerId: player0.id,
-      playerMmr: Number.parseFloat(player0.mmr),
-      playerName: player0.name,
+      queueId: queue_id,
+      gameTime: new Date(parsedEntry.created_at),
+      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      mmrChange: Number.parseFloat(player0.elo_change ?? 0),
+      opponentId: player1.user_id,
+      opponentMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
+      opponentName: player1.name ?? 'Unknown',
+      playerId: player0.user_id,
+      playerMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
+      playerName: player0.name ?? 'Unknown',
       result: p0result,
-      won: parsedEntry.winner === 0,
+      won: parsedEntry.winning_team === player0.team,
     },
     {
       gameId,
       gameNum: game_num,
-      gameTime: new Date(parsedEntry.time),
-      gameType: parsedEntry.game,
-      mmrChange: Number.parseFloat(player1.mmr_change),
-      opponentId: player0.id,
-      opponentMmr: Number.parseFloat(player0.mmr),
-      opponentName: player0.name,
-      playerId: player1.id,
-      playerMmr: Number.parseFloat(player1.mmr),
-      playerName: player1.name,
+      queueId: queue_id,
+      gameTime: new Date(parsedEntry.created_at),
+      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      mmrChange: Number.parseFloat(player1.elo_change ?? 0),
+      opponentId: player0.user_id,
+      opponentMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
+      opponentName: player0.name ?? 'Unknown',
+      playerId: player1.user_id,
+      playerMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
+      playerName: player1.name ?? 'Unknown',
       result: p1result,
-      won: parsedEntry.winner === 1,
+      won: parsedEntry.winning_team === player1.team,
     },
   ]
 }
-export async function insertGameHistory(entries: any[]) {
+export async function insertGameHistory(entries: any[], queue_id: string) {
   const rawResults = await Promise.all(
     entries.map(async (entry) => {
       return db
         .insert(raw_history)
-        .values({ entry, game_num: entry.game_num })
+        .values({ entry, game_num: entry.match_id })
         .returning()
         .onConflictDoUpdate({
           target: raw_history.game_num,
@@ -298,7 +297,7 @@ export async function insertGameHistory(entries: any[]) {
   ).then((res) => res.filter(Boolean))
 
   const playerGameRows = rawResults.flatMap(({ entry, id, game_num }: any) => {
-    return processGameEntry(id, game_num, entry)
+    return processGameEntry(id, game_num, entry, queue_id)
   })
 
   await Promise.all(

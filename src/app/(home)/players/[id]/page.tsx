@@ -13,6 +13,7 @@ export default async function PlayerPage({
   if (id) {
     await Promise.all([
       api.history.user_games.prefetch({
+        queue_id: RANKED_QUEUE_ID,
         user_id: id,
       }),
       api.discord.get_user_by_id.prefetch({

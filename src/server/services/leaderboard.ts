@@ -1,5 +1,5 @@
 import { redis } from '../redis'
-import { type LeaderboardEntry, neatqueue_service } from './botlatro.service'
+import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
 import { db } from '@/server/db'
 import { leaderboardSnapshots, metadata } from '@/server/db/schema'
 import { eq, desc, and, gte, lt } from 'drizzle-orm'
@@ -187,7 +187,7 @@ export class LeaderboardService {
 
   async refreshLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
     try {
-      const fresh = await neatqueue_service.get_leaderboard(queue_id)
+      const fresh = await botlatro_service.get_leaderboard(queue_id)
       const zsetKey = this.getZSetKey(queue_id)
       const rawKey = this.getRawKey(queue_id)
       const backupKey = this.getBackupKey(queue_id)
@@ -254,7 +254,7 @@ export class LeaderboardService {
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
 
-      // If neatqueue fails, try to get the latest backup from the database
+      // If botlatro fails, try to get the latest backup from the database
       const backupKey = this.getBackupKey(queue_id)
       const backup = await db
         .select()
@@ -281,12 +281,12 @@ export class LeaderboardService {
       const cached = await redis.get(this.getRawKey(queue_id))
       if (cached) return { data: JSON.parse(cached) as LeaderboardEntry[], isStale: false }
 
-      // If not in cache, try to refresh from neatqueue
+      // If not in cache, try to refresh from botlatro
       return await this.refreshLeaderboard(queue_id)
     } catch (error) {
-      console.error('Error getting leaderboard from neatqueue:', error)
+      console.error('Error getting leaderboard from botlatro:', error)
 
-      // If neatqueue fails, try to get the latest backup from the database
+      // If botlatro fails, try to get the latest backup from the database
       const backupKey = this.getBackupKey(queue_id)
       const backup = await db
         .select()
