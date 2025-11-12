@@ -1,12 +1,12 @@
-import { redis } from '../redis'
-import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
-import { db } from '@/server/db'
-import { leaderboardSnapshots, metadata } from '@/server/db/schema'
-import { eq, desc, and, gte, lt } from 'drizzle-orm'
-import { sql } from 'drizzle-orm'
 import fs from 'node:fs'
 import path from 'node:path'
+import { db } from '@/server/db'
+import { leaderboardSnapshots, metadata } from '@/server/db/schema'
 import { SEASON_3_START_DATE, SEASON_4_START_DATE } from '@/shared/seasons'
+import { and, desc, eq, gte, lt } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
+import { redis } from '../redis'
+import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
 
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
@@ -42,7 +42,12 @@ export class LeaderboardService {
 
     try {
       // Path to the Season 2 snapshot file
-      const filePath = path.join(process.cwd(), 'src', 'data', 'leaderboard-snapshot-eos2.json')
+      const filePath = path.join(
+        process.cwd(),
+        'src',
+        'data',
+        'leaderboard-snapshot-eos2.json'
+      )
 
       // Read and parse the file
       const fileContent = fs.readFileSync(filePath, 'utf-8')
@@ -83,17 +88,20 @@ export class LeaderboardService {
     // Recalculate ranks based on sorted order
     return sortedEntries.map((entry, idx) => ({
       ...entry,
-      rank: idx + 1
+      rank: idx + 1,
     }))
   }
 
   // Get Season 2 user rank data
-  async getSeason2UserRank(queue_id: string, user_id: string): Promise<LeaderboardEntry | null> {
+  async getSeason2UserRank(
+    queue_id: string,
+    user_id: string
+  ): Promise<LeaderboardEntry | null> {
     // Get the sorted leaderboard with recalculated ranks
     const sortedLeaderboard = await this.getSeason2Leaderboard(queue_id)
 
     // Find the user entry in the sorted leaderboard
-    const userEntry = sortedLeaderboard.find(entry => entry.id === user_id)
+    const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
     return userEntry || null
   }
 
@@ -159,7 +167,10 @@ export class LeaderboardService {
   }
 
   // Get Season 3 user rank data
-  async getSeason3UserRank(queue_id: string, user_id: string): Promise<LeaderboardEntry | null> {
+  async getSeason3UserRank(
+    queue_id: string,
+    user_id: string
+  ): Promise<LeaderboardEntry | null> {
     const sortedLeaderboard = await this.getSeason3Leaderboard(queue_id)
     const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
     return userEntry || null
@@ -187,12 +198,23 @@ export class LeaderboardService {
 
   async refreshLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
     try {
+      console.log('Refreshing leaderboard for queue:', queue_id)
+      const start = performance.now()
       const fresh = await botlatro_service.get_leaderboard(queue_id)
+      const end = performance.now()
+      console.log(
+        `Fetching fresh data took ${(end - start).toFixed(2)}ms for queue ${queue_id}`
+      )
+      const start2 = performance.now()
+      console.log('Updating Redis cache for leaderboard:', queue_id)
       const zsetKey = this.getZSetKey(queue_id)
       const rawKey = this.getRawKey(queue_id)
       const backupKey = this.getBackupKey(queue_id)
       const timestamp = new Date().toISOString()
-      const snapshotKey = this.getSnapshotKey(queue_id, timestamp.replace(/[:.]/g, '_'))
+      const snapshotKey = this.getSnapshotKey(
+        queue_id,
+        timestamp.replace(/[:.]/g, '_')
+      )
 
       const pipeline = redis.pipeline()
       pipeline.setex(rawKey, 180, JSON.stringify(fresh))
@@ -209,26 +231,43 @@ export class LeaderboardService {
       pipeline.expire(zsetKey, 180)
       await pipeline.exec()
 
+      const end2 = performance.now()
+      console.log('Redis cache update took:', (end2 - start2).toFixed(2))
       // Store the snapshot in the dedicated leaderboardSnapshots table
-      await db
-        .insert(leaderboardSnapshots)
-        .values({
-          channelId: queue_id,
-          timestamp: new Date(timestamp),
-          data: fresh,
-        })
-
+      console.log(
+        'Storing snapshot in dedicated leaderboardSnapshots table:',
+        queue_id
+      )
+      const start3 = performance.now()
+      await db.insert(leaderboardSnapshots).values({
+        channelId: queue_id,
+        timestamp: new Date(timestamp),
+        data: fresh,
+      })
+      const end3 = performance.now()
+      console.log(
+        'Snapshot stored in dedicated leaderboardSnapshots table:',
+        (end3 - start3).toFixed(2)
+      )
       // Also store the snapshot with a unique timestamp-based key in metadata for backward compatibility
-      await db
-        .insert(metadata)
-        .values({
-          key: snapshotKey,
-          value: JSON.stringify({
-            data: fresh,
-            timestamp,
-            queue_id,
-          }),
-        })
+      console.log('Storing snapshot in metadata table:', queue_id)
+      const start4 = performance.now()
+      await db.insert(metadata).values({
+        key: snapshotKey,
+        value: JSON.stringify({
+          data: fresh,
+          timestamp,
+          queue_id,
+        }),
+      })
+
+      const end4 = performance.now()
+      console.log(
+        'Snapshot stored in metadata table:',
+        (end4 - start4).toFixed(2)
+      )
+
+      const start5 = performance.now()
 
       // Also store/update the latest successful leaderboard data for backward compatibility
       await db
@@ -249,7 +288,11 @@ export class LeaderboardService {
             }),
           },
         })
-
+      const end5 = performance.now()
+      console.log(
+        'Backup stored in metadata table:',
+        (end5 - start5).toFixed(2)
+      )
       return { data: fresh, isStale: false }
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
@@ -265,12 +308,16 @@ export class LeaderboardService {
 
       if (backup) {
         const parsedBackup = JSON.parse(backup.value)
-        console.log(`Using backup leaderboard data from ${parsedBackup.timestamp} in refreshLeaderboard`)
+        console.log(
+          `Using backup leaderboard data from ${parsedBackup.timestamp} in refreshLeaderboard`
+        )
         return { data: parsedBackup.data as LeaderboardEntry[], isStale: true }
       }
 
       // If no backup exists, return an empty array with isStale flag
-      console.log('No backup leaderboard data available for refreshLeaderboard, returning empty array')
+      console.log(
+        'No backup leaderboard data available for refreshLeaderboard, returning empty array'
+      )
       return { data: [], isStale: true }
     }
   }
@@ -279,7 +326,11 @@ export class LeaderboardService {
     try {
       // Try to get from Redis cache first
       const cached = await redis.get(this.getRawKey(queue_id))
-      if (cached) return { data: JSON.parse(cached) as LeaderboardEntry[], isStale: false }
+      if (cached)
+        return {
+          data: JSON.parse(cached) as LeaderboardEntry[],
+          isStale: false,
+        }
 
       // If not in cache, try to refresh from botlatro
       return await this.refreshLeaderboard(queue_id)
@@ -297,12 +348,16 @@ export class LeaderboardService {
 
       if (backup) {
         const parsedBackup = JSON.parse(backup.value)
-        console.log(`Using backup leaderboard data from ${parsedBackup.timestamp}`)
+        console.log(
+          `Using backup leaderboard data from ${parsedBackup.timestamp}`
+        )
         return { data: parsedBackup.data as LeaderboardEntry[], isStale: true }
       }
 
       // If no backup exists, return an empty array with isStale flag
-      console.log('No backup leaderboard data available for getLeaderboard, returning empty array')
+      console.log(
+        'No backup leaderboard data available for getLeaderboard, returning empty array'
+      )
       return { data: [], isStale: true }
     }
   }
@@ -315,7 +370,7 @@ export class LeaderboardService {
    */
   async getLeaderboardSnapshots(
     queue_id: string,
-    limit: number = 100
+    limit = 100
   ): Promise<LeaderboardSnapshotResponse[]> {
     try {
       // Query the dedicated leaderboardSnapshots table
@@ -335,7 +390,10 @@ export class LeaderboardService {
         }
       })
     } catch (error) {
-      console.error('Error getting leaderboard snapshots from dedicated table:', error)
+      console.error(
+        'Error getting leaderboard snapshots from dedicated table:',
+        error
+      )
 
       try {
         // Fallback to the old metadata table approach if the new table query fails
@@ -359,13 +417,19 @@ export class LeaderboardService {
           }
         })
       } catch (fallbackError) {
-        console.error('Error getting leaderboard snapshots from metadata fallback:', fallbackError)
+        console.error(
+          'Error getting leaderboard snapshots from metadata fallback:',
+          fallbackError
+        )
         return []
       }
     }
   }
 
-  async getUserRank(queue_id: string, user_id: string): Promise<UserRankResponse> {
+  async getUserRank(
+    queue_id: string,
+    user_id: string
+  ): Promise<UserRankResponse> {
     try {
       // Try to get user data from Redis first
       const userData = await redis.hgetall(this.getUserKey(user_id, queue_id))
@@ -376,19 +440,23 @@ export class LeaderboardService {
             mmr: Number(userData.mmr),
             streak: userData.streak,
           } as unknown as LeaderboardEntry,
-          isStale: false
+          isStale: false,
         }
       }
 
       // If not found in Redis, try to refresh the leaderboard
       try {
-        const { data: freshLeaderboard } = await this.refreshLeaderboard(queue_id)
-        const userEntry = freshLeaderboard.find(entry => entry.id === user_id)
+        const { data: freshLeaderboard } =
+          await this.refreshLeaderboard(queue_id)
+        const userEntry = freshLeaderboard.find((entry) => entry.id === user_id)
         if (userEntry) {
           return { data: userEntry, isStale: false }
         }
       } catch (refreshError) {
-        console.error('Error refreshing leaderboard for user rank:', refreshError)
+        console.error(
+          'Error refreshing leaderboard for user rank:',
+          refreshError
+        )
         // Continue to backup if refresh fails
       }
 
@@ -403,9 +471,13 @@ export class LeaderboardService {
 
       if (backup) {
         const parsedBackup = JSON.parse(backup.value)
-        const userEntry = parsedBackup.data.find((entry: any) => entry.id === user_id)
+        const userEntry = parsedBackup.data.find(
+          (entry: any) => entry.id === user_id
+        )
         if (userEntry) {
-          console.log(`Using backup leaderboard data for user ${user_id} from ${parsedBackup.timestamp}`)
+          console.log(
+            `Using backup leaderboard data for user ${user_id} from ${parsedBackup.timestamp}`
+          )
           return { data: userEntry as LeaderboardEntry, isStale: true }
         }
       }
