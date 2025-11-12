@@ -31,7 +31,7 @@ export const player_games = pgTable(
   'player_games',
   {
     playerId: text('player_id').notNull(),
-    queueId: text('queue_id').notNull(),
+    queueId: text('queue_id'),
     playerName: text('player_name').notNull(),
     gameId: integer('game_id').notNull(),
     gameTime: timestamp('game_time').notNull(),
@@ -191,7 +191,10 @@ export const leaderboardSnapshots = pgTable('leaderboard_snapshots', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
-export const leaderboardSnapshotsRelations = relations(leaderboardSnapshots, ({}) => ({}))
+export const leaderboardSnapshotsRelations = relations(
+  leaderboardSnapshots,
+  ({}) => ({})
+)
 
 export const transcripts = pgTable('transcripts', {
   id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
@@ -207,7 +210,9 @@ export const blogPosts = pgTable('blog_posts', {
   content: text('content').notNull(),
   excerpt: text('excerpt'),
   published: boolean('published').notNull().default(false),
-  authorId: varchar('author_id', { length: 255 }).references(() => users.id).notNull(),
+  authorId: varchar('author_id', { length: 255 })
+    .references(() => users.id)
+    .notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')
     .notNull()
