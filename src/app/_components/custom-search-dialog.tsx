@@ -130,7 +130,7 @@ function SearchResults({
     items.length > 0 &&
     (!active || items.every((item) => item.id !== active))
   ) {
-    setActive(items[0].id)
+    setActive(items[0]?.id)
   }
 
   const onOpen = ({ external, url }: { external?: boolean; url: string }) => {
