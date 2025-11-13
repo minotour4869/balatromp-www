@@ -2,11 +2,11 @@ import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
 import { botlatro_service } from '@/server/services/botlatro.service'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
-import { RANKED_QUEUE_ID } from '@/shared/constants'
 
 export const history_router = createTRPCRouter({
   getTranscript: publicProcedure
@@ -113,7 +113,12 @@ export const history_router = createTRPCRouter({
       return await ctx.db
         .select()
         .from(player_games)
-        .where(and(eq(player_games.playerId, input.user_id), eq(player_games.queueId, input.queue_id)))
+        .where(
+          and(
+            eq(player_games.playerId, input.user_id),
+            eq(player_games.queueId, input.queue_id)
+          )
+        )
         .orderBy(desc(player_games.gameNum))
     }),
   sync: publicProcedure
@@ -134,7 +139,11 @@ export const history_router = createTRPCRouter({
       })
     )
     .mutation(async ({ input }) => {
-      return syncHistoryByDateRange(input.queue_id, input.start_date, input.end_date)
+      return syncHistoryByDateRange(
+        input.queue_id,
+        input.start_date,
+        input.end_date
+      )
     }),
 })
 
@@ -146,35 +155,32 @@ export async function syncHistory(queue_id: string) {
     .limit(1)
     .then((res) => res[0])
   const data = await ky
-    .get(`http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`, {
-      timeout: 60000,
-    })
-    .json<any>()
-  const firstGame = Object.keys(data).sort(
-    (a, b) => Number.parseInt(a) - Number.parseInt(b)
-  )[0]
+    .get(
+      `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
+      {
+        timeout: 60000,
+        searchParams: { after_match_id: cursor?.value ?? 1 },
+      }
+    )
+    .json<OverallHistoryResponse>()
+  const lastGameId = data.matches.sort((a, b) => a.match_id - b.match_id)[0]
+    ?.match_id
 
-  if (!firstGame) {
-    throw new Error('No first game found')
+  if (!lastGameId) {
+    throw new Error('No last game found')
   }
-  if (firstGame === 'detail') {
-    await db.insert(metadata).values({
-      key: `history_cursor_failure_${queue_id}`,
-      value: JSON.stringify(data),
-    })
-    throw new Error('Something went wrong')
-  }
+
   await db
     .insert(metadata)
     .values({
       key: `history_cursor_${queue_id}`,
-      value: firstGame,
+      value: lastGameId.toString(),
     })
     .onConflictDoUpdate({
       target: metadata.key,
       set: {
         key: `history_cursor_${queue_id}`,
-        value: firstGame,
+        value: lastGameId.toString(),
       },
     })
 
@@ -221,7 +227,12 @@ export async function syncHistoryByDateRange(
   return data
 }
 
-function processGameEntry(gameId: number, game_num: number, entry: any, queue_id: string) {
+function processGameEntry(
+  gameId: number,
+  game_num: number,
+  entry: any,
+  queue_id: string
+) {
   const parsedEntry = typeof entry === 'string' ? JSON.parse(entry) : entry
 
   // Validate required fields
@@ -312,4 +323,27 @@ export async function insertGameHistory(entries: any[], queue_id: string) {
         .then((res) => res[0])
     })
   )
+}
+
+export interface OverallHistoryResponse {
+  matches: Match[]
+}
+
+export interface Match {
+  match_id: number
+  winning_team: number
+  deck: string | null
+  stake: string | null
+  best_of_3: boolean
+  best_of_5: boolean
+  created_at: string
+  players: Player[]
+}
+
+export interface Player {
+  user_id: string
+  name: string
+  team: number
+  elo_change: number
+  mmr_after: number
 }
