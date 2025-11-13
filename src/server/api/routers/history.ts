@@ -239,9 +239,9 @@ export async function syncHistoryByDateRange(
     }
   )
 
-  const data = await response.json<any>()
+  const data = await response.json<OverallHistoryResponse>()
 
-  const chunkedData = chunk(data.data, 100)
+  const chunkedData = chunk(data.matches, 100)
   for (const chunk of chunkedData) {
     await insertGameHistory(chunk, queue_id).catch((e) => {
       console.error(e)
