@@ -11,6 +11,29 @@ import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
   isStale: boolean
+  total?: number
+  page?: number
+  pageSize?: number
+  totalPages?: number
+}
+
+export type PaginationOptions = {
+  page: number
+  pageSize: number
+  search?: string
+  minGames?: number
+  maxGames?: number
+  sortBy?:
+    | 'rank'
+    | 'mmr'
+    | 'wins'
+    | 'losses'
+    | 'winrate'
+    | 'totalgames'
+    | 'streak'
+    | 'peak_mmr'
+    | 'peak_streak'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export type LeaderboardSnapshotResponse = {
@@ -196,6 +219,55 @@ export class LeaderboardService {
     return `snapshot_leaderboard_${queue_id}_`
   }
 
+  private applyFiltersAndPagination(
+    data: LeaderboardEntry[],
+    options: PaginationOptions
+  ): LeaderboardResponse {
+    let filtered = data
+
+    // Apply filtering
+    if (options.search) {
+      const searchLower = options.search.toLowerCase()
+      filtered = filtered.filter((entry) =>
+        entry.name.toLowerCase().includes(searchLower)
+      )
+    }
+    if (options.minGames !== undefined) {
+      filtered = filtered.filter(
+        (entry) => entry.totalgames >= options.minGames!
+      )
+    }
+    if (options.maxGames !== undefined) {
+      filtered = filtered.filter(
+        (entry) => entry.totalgames <= options.maxGames!
+      )
+    }
+
+    // Apply sorting
+    if (options.sortBy) {
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = a[options.sortBy!]
+        const bVal = b[options.sortBy!]
+        const order = options.sortOrder === 'asc' ? 1 : -1
+        return aVal < bVal ? -order : aVal > bVal ? order : 0
+      })
+    }
+
+    // Apply pagination
+    const total = filtered.length
+    const offset = (options.page - 1) * options.pageSize
+    const paginated = filtered.slice(offset, offset + options.pageSize)
+
+    return {
+      data: paginated,
+      total,
+      page: options.page,
+      pageSize: options.pageSize,
+      totalPages: Math.ceil(total / options.pageSize),
+      isStale: false,
+    }
+  }
+
   async refreshLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
     try {
       console.log('Refreshing leaderboard for queue:', queue_id)
@@ -269,18 +341,32 @@ export class LeaderboardService {
     }
   }
 
-  async getLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
+  async getLeaderboard(
+    queue_id: string,
+    options?: PaginationOptions
+  ): Promise<LeaderboardResponse> {
     try {
       // Try to get from Redis cache first
       const cached = await redis.get(this.getRawKey(queue_id))
-      if (cached)
-        return {
-          data: JSON.parse(cached) as LeaderboardEntry[],
-          isStale: false,
-        }
+      let data: LeaderboardEntry[]
+      let isStale = false
 
-      // If not in cache, try to refresh from botlatro
-      return await this.refreshLeaderboard(queue_id)
+      if (cached) {
+        data = JSON.parse(cached) as LeaderboardEntry[]
+      } else {
+        // If not in cache, try to refresh from botlatro
+        const result = await this.refreshLeaderboard(queue_id)
+        data = result.data
+        isStale = result.isStale
+      }
+
+      // If no pagination options, return all data (backward compatibility)
+      if (!options) {
+        return { data, isStale }
+      }
+
+      const result = this.applyFiltersAndPagination(data, options)
+      return { ...result, isStale }
     } catch (error) {
       console.error('Error getting leaderboard from botlatro:', error)
 
@@ -298,14 +384,29 @@ export class LeaderboardService {
         console.log(
           `Using backup leaderboard data from ${parsedBackup.timestamp}`
         )
-        return { data: parsedBackup.data as LeaderboardEntry[], isStale: true }
+        const data = parsedBackup.data as LeaderboardEntry[]
+
+        // Apply same filtering/pagination logic for backup data
+        if (!options) {
+          return { data, isStale: true }
+        }
+
+        const result = this.applyFiltersAndPagination(data, options)
+        return { ...result, isStale: true }
       }
 
       // If no backup exists, return an empty array with isStale flag
       console.log(
         'No backup leaderboard data available for getLeaderboard, returning empty array'
       )
-      return { data: [], isStale: true }
+      return {
+        data: [],
+        isStale: true,
+        total: 0,
+        page: options?.page ?? 1,
+        pageSize: options?.pageSize ?? 50,
+        totalPages: 0,
+      }
     }
   }
 

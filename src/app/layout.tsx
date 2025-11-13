@@ -9,6 +9,7 @@ import { getLocale } from 'next-intl/server'
 import PlausibleProvider from 'next-plausible'
 import { Geist } from 'next/font/google'
 import localFont from 'next/font/local'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 export const metadata: Metadata = {
   title: {
     template: '%s | Balatro Multiplayer',
@@ -66,7 +67,9 @@ export default async function RootLayout({
         <TRPCReactProvider>
           <NextIntlClientProvider>
             <SessionProvider>
-              <RootProvider>{children}</RootProvider>
+              <NuqsAdapter>
+                <RootProvider>{children}</RootProvider>
+              </NuqsAdapter>
             </SessionProvider>
           </NextIntlClientProvider>
         </TRPCReactProvider>

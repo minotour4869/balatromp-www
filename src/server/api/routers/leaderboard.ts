@@ -3,8 +3,8 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from '@/server/api/trpc'
-import { LeaderboardService } from '@/server/services/leaderboard'
 import type { LeaderboardEntry } from '@/server/services/botlatro.service'
+import { LeaderboardService } from '@/server/services/leaderboard'
 import { SeasonSchema } from '@/shared/seasons'
 import { z } from 'zod'
 const service = new LeaderboardService()
@@ -15,6 +15,25 @@ export const leaderboard_router = createTRPCRouter({
       z.object({
         channel_id: z.string(),
         season: SeasonSchema.optional().default('season4'),
+        page: z.number().min(1).optional().default(1),
+        pageSize: z.number().min(1).max(100).optional().default(50),
+        search: z.string().optional(),
+        minGames: z.number().optional(),
+        maxGames: z.number().optional(),
+        sortBy: z
+          .enum([
+            'rank',
+            'mmr',
+            'wins',
+            'losses',
+            'winrate',
+            'totalgames',
+            'streak',
+            'peak_mmr',
+            'peak_streak',
+          ])
+          .optional(),
+        sortOrder: z.enum(['asc', 'desc']).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -23,8 +42,43 @@ export const leaderboard_router = createTRPCRouter({
         const season2Data = await service.getSeason2Leaderboard(
           input.channel_id
         )
+        // Apply filtering
+        let filtered = season2Data
+        if (input.search) {
+          const searchLower = input.search.toLowerCase()
+          filtered = filtered.filter((entry) =>
+            entry.name.toLowerCase().includes(searchLower)
+          )
+        }
+        if (input.minGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames >= input.minGames!
+          )
+        }
+        if (input.maxGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames <= input.maxGames!
+          )
+        }
+        // Apply sorting
+        if (input.sortBy) {
+          filtered = [...filtered].sort((a, b) => {
+            const aVal = a[input.sortBy!]
+            const bVal = b[input.sortBy!]
+            const order = input.sortOrder === 'asc' ? 1 : -1
+            return aVal < bVal ? -order : aVal > bVal ? order : 0
+          })
+        }
+        // Apply pagination
+        const total = filtered.length
+        const offset = (input.page - 1) * input.pageSize
+        const paginated = filtered.slice(offset, offset + input.pageSize)
         return {
-          data: season2Data,
+          data: paginated,
+          total,
+          page: input.page,
+          pageSize: input.pageSize,
+          totalPages: Math.ceil(total / input.pageSize),
           isStale: false,
         }
       }
@@ -33,15 +87,62 @@ export const leaderboard_router = createTRPCRouter({
         const season3Data = await service.getSeason3Leaderboard(
           input.channel_id
         )
+        // Apply filtering
+        let filtered = season3Data
+        if (input.search) {
+          const searchLower = input.search.toLowerCase()
+          filtered = filtered.filter((entry) =>
+            entry.name.toLowerCase().includes(searchLower)
+          )
+        }
+        if (input.minGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames >= input.minGames!
+          )
+        }
+        if (input.maxGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames <= input.maxGames!
+          )
+        }
+        // Apply sorting
+        if (input.sortBy) {
+          filtered = [...filtered].sort((a, b) => {
+            const aVal = a[input.sortBy!]
+            const bVal = b[input.sortBy!]
+            const order = input.sortOrder === 'asc' ? 1 : -1
+            return aVal < bVal ? -order : aVal > bVal ? order : 0
+          })
+        }
+        // Apply pagination
+        const total = filtered.length
+        const offset = (input.page - 1) * input.pageSize
+        const paginated = filtered.slice(offset, offset + input.pageSize)
         return {
-          data: season3Data,
+          data: paginated,
+          total,
+          page: input.page,
+          pageSize: input.pageSize,
+          totalPages: Math.ceil(total / input.pageSize),
           isStale: false,
         }
       }
       // For Season 4 (current) or all, use the current data
-      const result = await service.getLeaderboard(input.channel_id)
+      const result = await service.getLeaderboard(input.channel_id, {
+        page: input.page,
+        pageSize: input.pageSize,
+        search: input.search,
+        minGames: input.minGames,
+        maxGames: input.maxGames,
+        sortBy: input.sortBy,
+        sortOrder: input.sortOrder,
+      })
       return {
         data: result.data as LeaderboardEntry[],
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages,
         isStale: result.isStale,
       }
     }),

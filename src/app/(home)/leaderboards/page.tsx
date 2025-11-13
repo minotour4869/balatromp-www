@@ -13,12 +13,18 @@ export default async function Home() {
   await Promise.all([
     api.leaderboard.get_leaderboard.prefetch({
       channel_id: RANKED_QUEUE_ID,
+      page: 1,
+      pageSize: 50,
     }),
     api.leaderboard.get_leaderboard.prefetch({
       channel_id: VANILLA_QUEUE_ID,
+      page: 1,
+      pageSize: 50,
     }),
     api.leaderboard.get_leaderboard.prefetch({
       channel_id: SMALLWORLD_QUEUE_ID,
+      page: 1,
+      pageSize: 50,
     }),
   ])
   if (session?.user) {
