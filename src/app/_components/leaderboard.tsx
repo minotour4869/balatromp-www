@@ -200,13 +200,22 @@ export function LeaderboardPage() {
     }
   }, [season, sortBy, setQueryParams])
 
+  // Determine channel ID based on leaderboard type and season
+  const channelId = useMemo(() => {
+    const isOldSeason = season === 'season2' || season === 'season3'
+    if (leaderboardType === 'vanilla') {
+      return isOldSeason ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID
+    }
+    if (leaderboardType === 'smallworld') {
+      return isOldSeason ? OLD_SMALLWORLD_CHANNEL : SMALLWORLD_QUEUE_ID
+    }
+    return isOldSeason ? OLD_RANKED_CHANNEL : RANKED_QUEUE_ID
+  }, [leaderboardType, season])
+
   // Fetch leaderboard data with pagination (use queue id if season 4, use old channel id otherwise)
-  const [rankedLeaderboardResult] =
+  const [currentLeaderboardResult] =
     api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id:
-        season === 'season2' || season === 'season3'
-          ? OLD_RANKED_CHANNEL
-          : RANKED_QUEUE_ID,
+      channel_id: channelId,
       season,
       page,
       pageSize: 50,
@@ -216,53 +225,6 @@ export function LeaderboardPage() {
       sortBy: sortColumn as any,
       sortOrder: sortDirection,
     })
-
-  const [vanillaLeaderboardResult] =
-    api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id:
-        season === 'season2' || season === 'season3'
-          ? OLD_VANILLA_CHANNEL
-          : VANILLA_QUEUE_ID,
-      season,
-      page,
-      pageSize: 50,
-      search: searchQuery || undefined,
-      minGames: minGames ?? undefined,
-      maxGames: maxGames ?? undefined,
-      sortBy: sortColumn as any,
-      sortOrder: sortDirection,
-    })
-  const [smallWorldLeaderboardResult] =
-    api.leaderboard.get_leaderboard.useSuspenseQuery({
-      channel_id:
-        season === 'season2' || season === 'season3'
-          ? OLD_SMALLWORLD_CHANNEL
-          : SMALLWORLD_QUEUE_ID,
-      season,
-      page,
-      pageSize: 50,
-      search: searchQuery || undefined,
-      minGames: minGames ?? undefined,
-      maxGames: maxGames ?? undefined,
-      sortBy: sortColumn as any,
-      sortOrder: sortDirection,
-    })
-
-  // Get the current leaderboard based on selected tab
-  const currentLeaderboardResult = useMemo(
-    () =>
-      leaderboardType === 'ranked'
-        ? rankedLeaderboardResult
-        : leaderboardType === 'vanilla'
-          ? vanillaLeaderboardResult
-          : smallWorldLeaderboardResult,
-    [
-      leaderboardType,
-      rankedLeaderboardResult,
-      vanillaLeaderboardResult,
-      smallWorldLeaderboardResult,
-    ]
-  )
 
   const currentLeaderboard = currentLeaderboardResult.data
 
