@@ -20,7 +20,7 @@ function verifyQuerySecret(req: NextRequest): boolean {
     return false
   }
 
-  const providedSecret = req.headers.get('Authorization')
+  const providedSecret = req.headers.get('Authorization')?.split('Bearer ')[1]
 
   if (!providedSecret) {
     console.warn('Auth token is missing.')
