@@ -1,4 +1,5 @@
 import '@/styles/globals.css'
+import CustomSearchDialog from '@/app/_components/custom-search-dialog'
 import { Toaster } from '@/components/ui/sonner'
 import { TRPCReactProvider } from '@/trpc/react'
 import { RootProvider } from 'fumadocs-ui/provider'
@@ -68,7 +69,13 @@ export default async function RootLayout({
           <NextIntlClientProvider>
             <SessionProvider>
               <NuqsAdapter>
-                <RootProvider>{children}</RootProvider>
+                <RootProvider
+                  search={{
+                    SearchDialog: CustomSearchDialog,
+                  }}
+                >
+                  {children}
+                </RootProvider>
               </NuqsAdapter>
             </SessionProvider>
           </NextIntlClientProvider>
