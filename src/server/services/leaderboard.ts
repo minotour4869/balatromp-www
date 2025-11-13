@@ -209,90 +209,37 @@ export class LeaderboardService {
       console.log('Updating Redis cache for leaderboard:', queue_id)
       const zsetKey = this.getZSetKey(queue_id)
       const rawKey = this.getRawKey(queue_id)
-      const backupKey = this.getBackupKey(queue_id)
       const timestamp = new Date().toISOString()
-      const snapshotKey = this.getSnapshotKey(
-        queue_id,
-        timestamp.replace(/[:.]/g, '_')
-      )
 
-      const pipeline = redis.pipeline()
-      pipeline.setex(rawKey, 180, JSON.stringify(fresh))
-      pipeline.del(zsetKey)
+      // Initial pipeline for cache setup
+      const initialPipeline = redis.pipeline()
+      initialPipeline.setex(rawKey, 180, JSON.stringify(fresh))
+      initialPipeline.del(zsetKey)
+      await initialPipeline.exec()
 
-      for (const entry of fresh) {
-        pipeline.zadd(zsetKey, entry.mmr, entry.id)
-        pipeline.hset(this.getUserKey(entry.id, queue_id), {
-          ...entry,
-          queue_id,
-        })
+      // Batch process entries to prevent memory issues with large datasets
+      const BATCH_SIZE = 1000
+      for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
+        const batch = fresh.slice(i, i + BATCH_SIZE)
+        const batchPipeline = redis.pipeline()
+
+        for (const entry of batch) {
+          batchPipeline.zadd(zsetKey, entry.mmr, entry.id)
+          batchPipeline.hset(this.getUserKey(entry.id, queue_id), {
+            ...entry,
+            queue_id,
+          })
+        }
+
+        await batchPipeline.exec()
       }
 
-      pipeline.expire(zsetKey, 180)
-      await pipeline.exec()
+      // Set expiration after all batches complete
+      await redis.expire(zsetKey, 180)
 
       const end2 = performance.now()
       console.log('Redis cache update took:', (end2 - start2).toFixed(2))
-      // Store the snapshot in the dedicated leaderboardSnapshots table
-      console.log(
-        'Storing snapshot in dedicated leaderboardSnapshots table:',
-        queue_id
-      )
-      const start3 = performance.now()
-      await db.insert(leaderboardSnapshots).values({
-        channelId: queue_id,
-        timestamp: new Date(timestamp),
-        data: fresh,
-      })
-      const end3 = performance.now()
-      console.log(
-        'Snapshot stored in dedicated leaderboardSnapshots table:',
-        (end3 - start3).toFixed(2)
-      )
-      // Also store the snapshot with a unique timestamp-based key in metadata for backward compatibility
-      console.log('Storing snapshot in metadata table:', queue_id)
-      const start4 = performance.now()
-      await db.insert(metadata).values({
-        key: snapshotKey,
-        value: JSON.stringify({
-          data: fresh,
-          timestamp,
-          queue_id,
-        }),
-      })
 
-      const end4 = performance.now()
-      console.log(
-        'Snapshot stored in metadata table:',
-        (end4 - start4).toFixed(2)
-      )
-
-      const start5 = performance.now()
-
-      // Also store/update the latest successful leaderboard data for backward compatibility
-      await db
-        .insert(metadata)
-        .values({
-          key: backupKey,
-          value: JSON.stringify({
-            data: fresh,
-            timestamp,
-          }),
-        })
-        .onConflictDoUpdate({
-          target: metadata.key,
-          set: {
-            value: JSON.stringify({
-              data: fresh,
-              timestamp,
-            }),
-          },
-        })
-      const end5 = performance.now()
-      console.log(
-        'Backup stored in metadata table:',
-        (end5 - start5).toFixed(2)
-      )
       return { data: fresh, isStale: false }
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
