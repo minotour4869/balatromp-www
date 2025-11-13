@@ -229,7 +229,8 @@ export class LeaderboardService {
     if (options.search) {
       const searchLower = options.search.toLowerCase()
       filtered = filtered.filter((entry) =>
-        entry.name.toLowerCase().includes(searchLower)
+        entry.name.toLowerCase().includes(searchLower) ||
+        entry.id.toLowerCase().includes(searchLower)
       )
     }
     if (options.minGames !== undefined) {
