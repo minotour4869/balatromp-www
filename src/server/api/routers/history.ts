@@ -163,7 +163,7 @@ export async function syncHistory(queue_id: string) {
       }
     )
     .json<OverallHistoryResponse>()
-  const lastGameId = data.matches.sort((a, b) => a.match_id - b.match_id)[0]
+  const lastGameId = data.matches.sort((a, b) => b.match_id - a.match_id)[0]
     ?.match_id
 
   if (!lastGameId) {
