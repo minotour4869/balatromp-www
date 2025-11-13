@@ -26,10 +26,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-    OLD_RANKED_CHANNEL,
-    RANKED_QUEUE_ID,
-    SMALLWORLD_QUEUE_ID,
-    VANILLA_QUEUE_ID,
+  OLD_RANKED_CHANNEL,
+  RANKED_QUEUE_ID,
+  SMALLWORLD_QUEUE_ID,
+  VANILLA_QUEUE_ID,
 } from '@/shared/constants'
 import {
   type Season,
@@ -525,7 +525,7 @@ function UserInfoComponent() {
           </div>
         </div>
 
-        <Tabs defaultValue='matches' className='p-6'>
+        <Tabs defaultValue='matches' className='py-6'>
           <div className='mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center'>
             <TabsList className='bg-gray-100 dark:bg-zinc-800'>
               <TabsTrigger value='matches'>Match History</TabsTrigger>
