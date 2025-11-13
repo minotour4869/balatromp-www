@@ -1,10 +1,9 @@
 import crypto from 'node:crypto'
 import { globalEmitter } from '@/lib/events'
-import { syncHistory } from '@/server/api/routers/history'
+import { syncSingleMatch } from '@/server/api/routers/history'
 import type { PlayerState } from '@/server/api/routers/player-state'
 import { PLAYER_STATE_KEY, redis } from '@/server/redis'
 import { leaderboardService } from '@/server/services/leaderboard'
-import { RANKED_QUEUE_ID, VANILLA_QUEUE_ID } from '@/shared/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 const EXPECTED_QUERY_SECRET = process.env.WEBHOOK_QUERY_SECRET
@@ -21,10 +20,10 @@ function verifyQuerySecret(req: NextRequest): boolean {
     return false
   }
 
-  const providedSecret = req.nextUrl.searchParams.get(QUERY_PARAM_NAME)
+  const providedSecret = req.headers.get('Authorization')
 
   if (!providedSecret) {
-    console.warn(`Query parameter "${QUERY_PARAM_NAME}" missing.`)
+    console.warn('Auth token is missing.')
     return false
   }
 
@@ -95,20 +94,20 @@ export async function POST(req: NextRequest) {
       }
 
       case 'MATCH_COMPLETED': {
-        const playerIds = payload.teams.map((p: any) => p[0].id) as string[]
-        console.log({ playerIds })
-        await syncHistory(RANKED_QUEUE_ID)
-        await Promise.allSettled(
-          [RANKED_QUEUE_ID].map((id) =>
-            leaderboardService.refreshLeaderboard(id)
-          )
-        )
-        await Promise.all(
-          playerIds.map(async (id) => {
-            await redis.del(PLAYER_STATE_KEY(id))
-            globalEmitter.emit(`state-change:${id}`, { status: 'idle' })
-          })
-        ).catch(console.error)
+        // const playerIds = payload.teams.map((p: any) => p[0].id) as string[]
+        // console.log({ playerIds })
+        const queueId = payload.queueId
+        const matchId = payload.matchId
+        await Promise.allSettled([
+          syncSingleMatch(queueId, matchId),
+          leaderboardService.refreshLeaderboard(queueId),
+        ])
+        // await Promise.all(
+        //   playerIds.map(async (id) => {
+        //     await redis.del(PLAYER_STATE_KEY(id))
+        //     globalEmitter.emit(`state-change:${id}`, { status: 'idle' })
+        //   })
+        // ).catch(console.error)
 
         break
       }
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      '--- Verified Webhook Received (Query Auth) ---',
+      '--- Verified Webhook Received (Auth) ---',
       new Date().toISOString(),
       '---\n',
       JSON.stringify(payload, null, 2),

@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       }
     } catch (e) {
       // If no body or parsing fails, we'll use default dates
-      console.log('No request body or empty body, using default date (yesterday)')
+      console.log(
+        'No request body or empty body, using default date (yesterday)'
+      )
     }
 
     // If no dates provided, default to a 3-day range (yesterday, today, and tomorrow)
@@ -43,10 +45,12 @@ export async function POST(request: Request) {
       tomorrow.setDate(tomorrow.getDate() + 1)
 
       // Format dates as YYYY-MM-DD
-      startDate = yesterday.toISOString().split('T')[0]
-      endDate = tomorrow.toISOString().split('T')[0]
+      startDate = yesterday.toISOString()
+      endDate = tomorrow.toISOString()
 
-      console.log(`No dates provided, defaulting to 3-day range: ${startDate} to ${endDate}`)
+      console.log(
+        `No dates provided, defaulting to 3-day range: ${startDate} to ${endDate}`
+      )
     }
 
     try {

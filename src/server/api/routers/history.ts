@@ -147,6 +147,29 @@ export const history_router = createTRPCRouter({
     }),
 })
 
+export async function syncSingleMatch(queue_id: string, match_id: number) {
+  const data = await ky
+    .get(
+      `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
+      {
+        timeout: 60000,
+        searchParams: { match_id },
+      }
+    )
+    .json<OverallHistoryResponse>()
+
+  if (!data.matches.length) {
+    throw new Error(`No match found for match_id ${match_id}`)
+  }
+
+  await insertGameHistory(data.matches, queue_id).catch((e) => {
+    console.error(e)
+    throw e
+  })
+
+  return data.matches[0]
+}
+
 export async function syncHistory(queue_id: string) {
   const cursor = await db
     .select()
