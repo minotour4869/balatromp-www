@@ -18,8 +18,8 @@ export type LeaderboardResponse = {
 }
 
 export type PaginationOptions = {
-  page: number
-  pageSize: number
+  page?: number
+  pageSize?: number
   search?: string
   minGames?: number
   maxGames?: number
@@ -253,17 +253,29 @@ export class LeaderboardService {
       })
     }
 
-    // Apply pagination
+    // Apply pagination if page or pageSize is provided
     const total = filtered.length
-    const offset = (options.page - 1) * options.pageSize
-    const paginated = filtered.slice(offset, offset + options.pageSize)
 
+    if (options.page !== undefined || options.pageSize !== undefined) {
+      const page = options.page ?? 1 // Default to page 1 if not provided
+      const pageSize = options.pageSize ?? 50 // Default to 50 if not provided
+      const offset = (page - 1) * pageSize
+      const paginated = filtered.slice(offset, offset + pageSize)
+
+      return {
+        data: paginated,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        isStale: false,
+      }
+    }
+
+    // Return all filtered data without pagination
     return {
-      data: paginated,
+      data: filtered,
       total,
-      page: options.page,
-      pageSize: options.pageSize,
-      totalPages: Math.ceil(total / options.pageSize),
       isStale: false,
     }
   }

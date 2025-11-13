@@ -23,25 +23,16 @@ export async function GET(request: Request) {
 
     if (query.trim()) {
       try {
+        // Get full leaderboard dataset with search filter but no pagination
         const leaderboard = await leaderboardService.getLeaderboard(
           RANKED_QUEUE_ID,
           {
-            page: 1,
-            pageSize: 1000, // Get enough to search through
             search: query,
           }
         )
 
-        // Also search by Discord ID (fuzzy match)
-        const queryLower = query.toLowerCase()
-        const filteredPlayers = leaderboard.data.filter((player) => {
-          const nameMatch = player.name.toLowerCase().includes(queryLower)
-          const idMatch = player.id.toLowerCase().includes(queryLower)
-          return nameMatch || idMatch
-        })
-
         // Take top 10 matches
-        playerResults = filteredPlayers.slice(0, 10).map((player) => ({
+        playerResults = leaderboard.data.slice(0, 10).map((player) => ({
           type: 'player' as const,
           username: player.name,
           discord_id: player.id,
