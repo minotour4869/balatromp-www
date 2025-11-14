@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         const matchId = payload.matchId
         await Promise.allSettled([
           syncSingleMatch(queueId, matchId),
-          leaderboardService.refreshLeaderboard(queueId),
+          // leaderboardService.refreshLeaderboard(queueId),
         ])
         await Promise.all(
           playerIds.map(async (id) => {
