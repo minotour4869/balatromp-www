@@ -1,12 +1,41 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
-import { metadata, player_games, raw_history } from '@/server/db/schema'
+import { memoryLogs, metadata, player_games, raw_history } from '@/server/db/schema'
 import { botlatro_service } from '@/server/services/botlatro.service'
 import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
 import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
+
+// Memory profiling utility
+let currentRunId: string | null = null
+
+function logMemory(label: string, metadata?: Record<string, any>) {
+  if (!currentRunId) return
+
+  const mem = process.memoryUsage()
+  const data = {
+    runId: currentRunId,
+    label,
+    heapUsedMb: mem.heapUsed / 1024 / 1024,
+    heapTotalMb: mem.heapTotal / 1024 / 1024,
+    rssMb: mem.rss / 1024 / 1024,
+    externalMb: mem.external / 1024 / 1024,
+    metadata: metadata || null,
+  }
+
+  // Fire and forget
+  db.insert(memoryLogs).values(data).catch(err => {
+    console.error('[Memory Log Error]', err)
+  })
+
+  console.log(`[MEMORY ${label}]`, {
+    heap: `${Math.round(data.heapUsedMb)}MB`,
+    rss: `${Math.round(data.rssMb)}MB`,
+    ...metadata
+  })
+}
 
 // Limit concurrent promises to avoid memory spikes
 async function pLimit<T>(
@@ -171,6 +200,26 @@ export const history_router = createTRPCRouter({
         input.end_date
       )
     }),
+  getMemoryLogs: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().default(1000),
+        runId: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      let query = db
+        .select()
+        .from(memoryLogs)
+        .orderBy(desc(memoryLogs.timestamp))
+        .limit(input.limit)
+
+      if (input.runId) {
+        query = query.where(eq(memoryLogs.runId, input.runId)) as any
+      }
+
+      return await query
+    }),
 })
 
 export async function syncSingleMatch(queue_id: string, match_id: number) {
@@ -197,12 +246,18 @@ export async function syncSingleMatch(queue_id: string, match_id: number) {
 }
 
 export async function syncHistory(queue_id: string) {
+  currentRunId = crypto.randomUUID()
+  logMemory('sync_start', { queue_id })
+
   const cursor = await db
     .select()
     .from(metadata)
     .where(eq(metadata.key, `history_cursor_${queue_id}`))
     .limit(1)
     .then((res) => res[0])
+
+  logMemory('after_cursor_fetch', { cursor_value: cursor?.value })
+
   const data = await ky
     .get(
       `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
@@ -212,12 +267,17 @@ export async function syncHistory(queue_id: string) {
       }
     )
     .json<OverallHistoryResponse>()
+
+  logMemory('after_api_fetch', { matches_count: data.matches.length })
+
   const lastGameId = data.matches.sort((a, b) => b.match_id - a.match_id)[0]
     ?.match_id
 
   if (!lastGameId) {
     throw new Error('No last game found')
   }
+
+  logMemory('after_sort', { last_game_id: lastGameId })
 
   await db
     .insert(metadata)
@@ -233,12 +293,21 @@ export async function syncHistory(queue_id: string) {
       },
     })
 
+  logMemory('after_cursor_update')
+
   const chunkedData = chunk(data.matches, 100)
-  for (const chunk of chunkedData) {
-    await insertGameHistory(chunk, queue_id).catch((e) => {
+  logMemory('after_chunking', { chunk_count: chunkedData.length })
+
+  for (let i = 0; i < chunkedData.length; i++) {
+    await insertGameHistory(chunkedData[i]!, queue_id).catch((e) => {
       console.error(e)
     })
+    logMemory(`after_chunk_${i}`, { chunk_index: i, chunk_size: chunkedData[i]!.length })
   }
+
+  logMemory('sync_end')
+  currentRunId = null
+
   return data
 }
 
@@ -340,6 +409,8 @@ function processGameEntry(
   ]
 }
 export async function insertGameHistory(entries: any[], queue_id: string) {
+  logMemory('insert_start', { entries_count: entries.length })
+
   // Limit concurrent DB operations to prevent memory bloat
   const rawResults = await pLimit(entries, 10, async (entry) => {
     return db
@@ -355,9 +426,13 @@ export async function insertGameHistory(entries: any[], queue_id: string) {
       .then((res) => res[0])
   }).then((res) => res.filter(Boolean))
 
+  logMemory('after_raw_insert', { raw_results_count: rawResults.length })
+
   const playerGameRows = rawResults.flatMap(({ entry, id, game_num }: any) => {
     return processGameEntry(id, game_num, entry, queue_id)
   })
+
+  logMemory('after_flatmap', { player_rows_count: playerGameRows.length })
 
   // Limit concurrent player game inserts as well
   await pLimit(playerGameRows, 20, async (row) => {
@@ -370,6 +445,8 @@ export async function insertGameHistory(entries: any[], queue_id: string) {
       })
       .then((res) => res[0])
   })
+
+  logMemory('insert_end')
 }
 
 export interface OverallHistoryResponse {

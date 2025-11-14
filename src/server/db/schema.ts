@@ -226,3 +226,15 @@ export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
     references: [users.id],
   }),
 }))
+
+export const memoryLogs = pgTable('memory_logs', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  runId: varchar('run_id', { length: 36 }).notNull(),
+  label: varchar('label', { length: 100 }).notNull(),
+  heapUsedMb: real('heap_used_mb').notNull(),
+  heapTotalMb: real('heap_total_mb').notNull(),
+  rssMb: real('rss_mb').notNull(),
+  externalMb: real('external_mb').notNull(),
+  metadata: json('metadata'),
+})
