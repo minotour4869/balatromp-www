@@ -26,14 +26,16 @@ function logMemory(label: string, metadata?: Record<string, any>) {
   }
 
   // Fire and forget
-  db.insert(memoryLogs).values(data).catch(err => {
-    console.error('[Memory Log Error]', err)
-  })
+  db.insert(memoryLogs)
+    .values(data)
+    .catch((err) => {
+      console.error('[Memory Log Error]', err)
+    })
 
   console.log(`[MEMORY ${label}]`, {
     heap: `${Math.round(data.heapUsedMb)}MB`,
     rss: `${Math.round(data.rssMb)}MB`,
-    ...metadata
+    ...metadata,
   })
 }
 
@@ -257,9 +259,10 @@ export class LeaderboardService {
     // Apply filtering
     if (options.search) {
       const searchLower = options.search.toLowerCase()
-      filtered = filtered.filter((entry) =>
-        entry.name.toLowerCase().includes(searchLower) ||
-        entry.id.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (entry) =>
+          entry.name.toLowerCase().includes(searchLower) ||
+          entry.id.toLowerCase().includes(searchLower)
       )
     }
     if (options.minGames !== undefined) {
@@ -361,7 +364,7 @@ export class LeaderboardService {
 
         logMemory(`after_redis_batch_${Math.floor(i / BATCH_SIZE)}`, {
           batch_index: Math.floor(i / BATCH_SIZE),
-          batch_size: batch.length
+          batch_size: batch.length,
         })
       }
 
@@ -369,7 +372,17 @@ export class LeaderboardService {
       await redis.expire(zsetKey, 180)
 
       logMemory('after_expire')
-
+      if (global.gc) {
+        console.log('[debug] forcing gc...')
+        const before = process.memoryUsage().heapUsed / 1024 / 1024
+        global.gc()
+        const after = process.memoryUsage().heapUsed / 1024 / 1024
+        console.log(
+          `[debug] heapUsed before gc: ${before.toFixed(2)} MB, after: ${after.toFixed(2)} MB`
+        )
+      } else {
+        console.warn('[debug] gc not exposed, run node with --expose-gc')
+      }
       const end2 = performance.now()
       console.log('Redis cache update took:', (end2 - start2).toFixed(2))
 
