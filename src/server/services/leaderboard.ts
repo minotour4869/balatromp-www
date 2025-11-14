@@ -334,10 +334,11 @@ export class LeaderboardService {
       logMemory('before_initial_pipeline')
 
       // Initial pipeline for cache setup
-      const initialPipeline = redis.pipeline()
+      let initialPipeline = redis.pipeline()
       initialPipeline.setex(rawKey, 180, JSON.stringify(fresh))
       initialPipeline.del(zsetKey)
       await initialPipeline.exec()
+      initialPipeline = null as any
 
       logMemory('after_initial_pipeline')
 
@@ -345,7 +346,7 @@ export class LeaderboardService {
       const BATCH_SIZE = 1000
       for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
         const batch = fresh.slice(i, i + BATCH_SIZE)
-        const batchPipeline = redis.pipeline()
+        let batchPipeline = redis.pipeline()
 
         for (const entry of batch) {
           batchPipeline.zadd(zsetKey, entry.mmr, entry.id)
@@ -356,6 +357,8 @@ export class LeaderboardService {
         }
 
         await batchPipeline.exec()
+        batchPipeline = null as any
+
         logMemory(`after_redis_batch_${Math.floor(i / BATCH_SIZE)}`, {
           batch_index: Math.floor(i / BATCH_SIZE),
           batch_size: batch.length
@@ -372,6 +375,11 @@ export class LeaderboardService {
 
       logMemory('refresh_end')
       currentRunId = null
+
+      // Hint to GC if available
+      if (global.gc) {
+        global.gc()
+      }
 
       return { data: fresh, isStale: false }
     } catch (error) {
