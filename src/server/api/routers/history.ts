@@ -4,7 +4,6 @@ import { memoryLogs, metadata, player_games, raw_history } from '@/server/db/sch
 import { botlatro_service } from '@/server/services/botlatro.service'
 import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
-import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
 
@@ -223,15 +222,13 @@ export const history_router = createTRPCRouter({
 })
 
 export async function syncSingleMatch(queue_id: string, match_id: number) {
-  const data = await ky
-    .get(
-      `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
-      {
-        timeout: 60000,
-        searchParams: { match_id },
-      }
-    )
-    .json<OverallHistoryResponse>()
+  const params = new URLSearchParams({ match_id: match_id.toString() })
+  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}?${params.toString()}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+  }
+  const data = await response.json() as OverallHistoryResponse
 
   if (!data.matches.length) {
     throw new Error(`No match found for match_id ${match_id}`)
@@ -258,15 +255,13 @@ export async function syncHistory(queue_id: string) {
 
   logMemory('after_cursor_fetch', { cursor_value: cursor?.value })
 
-  const data = await ky
-    .get(
-      `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
-      {
-        timeout: 60000,
-        searchParams: { after_match_id: cursor?.value ?? 1 },
-      }
-    )
-    .json<OverallHistoryResponse>()
+  const params = new URLSearchParams({ after_match_id: (cursor?.value ?? 1).toString() })
+  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}?${params.toString()}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+  }
+  const data = await response.json() as OverallHistoryResponse
 
   logMemory('after_api_fetch', { matches_count: data.matches.length })
 
@@ -316,25 +311,22 @@ export async function syncHistoryByDateRange(
   start_date?: string,
   end_date?: string
 ) {
-  const searchParams: Record<string, string> = {}
+  const params = new URLSearchParams()
 
   if (start_date) {
-    searchParams.start_date = start_date
+    params.set('start_date', start_date)
   }
 
   if (end_date) {
-    searchParams.end_date = end_date
+    params.set('end_date', end_date)
   }
 
-  const response = await ky.get(
-    `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}`,
-    {
-      searchParams,
-      timeout: 1000000,
-    }
-  )
-
-  const data = await response.json<OverallHistoryResponse>()
+  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}${params.toString() ? `?${params.toString()}` : ''}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+  }
+  const data = await response.json() as OverallHistoryResponse
 
   const chunkedData = chunk(data.matches, 100)
   for (const chunk of chunkedData) {
