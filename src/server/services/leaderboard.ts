@@ -330,8 +330,8 @@ export class LeaderboardService {
       logMemory('before_initial_pipeline')
 
       // Initial pipeline for cache setup
-      let initialPipeline = redis.pipeline()
-      initialPipeline.setex(rawKey, 180, JSON.stringify(fresh))
+      let initialPipeline = redis.multi()
+      initialPipeline.setEx(rawKey, 180, JSON.stringify(fresh))
       initialPipeline.del(zsetKey)
       await initialPipeline.exec()
       initialPipeline = null as any
@@ -342,14 +342,14 @@ export class LeaderboardService {
       const BATCH_SIZE = 1000
       for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
         const batch = fresh.slice(i, i + BATCH_SIZE)
-        let batchPipeline = redis.pipeline()
+        let batchPipeline = redis.multi()
 
         for (const entry of batch) {
-          batchPipeline.zadd(zsetKey, entry.mmr, entry.id)
-          batchPipeline.hset(this.getUserKey(entry.id, queue_id), {
+          batchPipeline.zAdd(zsetKey, { score: entry.mmr, value: entry.id })
+          batchPipeline.hSet(this.getUserKey(entry.id, queue_id), {
             ...entry,
             queue_id,
-          })
+          } as any)
         }
 
         await batchPipeline.exec()
@@ -557,8 +557,8 @@ export class LeaderboardService {
   ): Promise<UserRankResponse> {
     try {
       // Try to get user data from Redis first
-      const userData = await redis.hgetall(this.getUserKey(user_id, queue_id))
-      if (userData) {
+      const userData = await redis.hGetAll(this.getUserKey(user_id, queue_id))
+      if (userData && Object.keys(userData).length > 0) {
         return {
           data: {
             ...userData,

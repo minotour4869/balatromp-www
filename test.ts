@@ -1,8 +1,10 @@
 import { db } from '@/server/db'
 import { player_games } from '@/server/db/schema'
 import { desc, eq } from 'drizzle-orm'
-import { Redis } from 'ioredis'
-const redisClient = new Redis(process.env.REDIS_URL as string)
+import { createClient } from 'redis'
+const redisClient = await createClient({ url: process.env.REDIS_URL })
+  .on('error', (err) => console.error('Redis Client Error', err))
+  .connect()
 
 type PlayerState = {
   status: string
@@ -21,25 +23,23 @@ type QueueEntry = {
   value: PlayerState
 }
 
-async function findQueueingPlayers(redis: Redis): Promise<QueueEntry[]> {
+async function findQueueingPlayers(redis: ReturnType<typeof createClient>): Promise<QueueEntry[]> {
   try {
     const queueingPlayers: QueueEntry[] = []
     let cursor = '0'
     const pattern = 'player:*:state'
 
     do {
-      const [newCursor, keys] = await redis.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        '1000'
-      )
+      const result = await redis.scan(cursor, {
+        MATCH: pattern,
+        COUNT: 1000,
+      })
 
-      cursor = newCursor
+      cursor = result.cursor.toString()
+      const keys = result.keys
 
       if (keys.length > 0) {
-        const values = await redis.mget(keys)
+        const values = await redis.mGet(keys)
 
         keys.forEach((key, index) => {
           const value = values[index]
@@ -68,14 +68,6 @@ async function findQueueingPlayers(redis: Redis): Promise<QueueEntry[]> {
   }
 }
 
-redisClient.on('connect', () => {
-  console.log('Redis client connected')
-})
-
-redisClient.on('error', (err) => {
-  console.error('Redis client error:', err)
-})
-
 async function logQueueingPlayers() {
   try {
     const queueingPlayers = await findQueueingPlayers(redisClient)
@@ -102,7 +94,7 @@ async function logQueueingPlayers() {
     console.error('Failed to log queuing players:', error)
     throw error
   } finally {
-    await redisClient.quit()
+    await redisClient.disconnect()
   }
 }
 

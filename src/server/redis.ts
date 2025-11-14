@@ -1,7 +1,11 @@
 import { env } from '@/env'
-import { Redis } from 'ioredis'
+import { createClient } from 'redis'
 
-export const redis = new Redis(env.REDIS_URL)
+const client = createClient({ url: env.REDIS_URL })
+client.on('error', (err) => console.error('Redis Client Error', err))
+await client.connect()
+
+export const redis = client
 
 export const PLAYER_STATE_KEY = (userId: string) => `player:${userId}:state`
 setInterval(() => {
