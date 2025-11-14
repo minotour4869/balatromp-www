@@ -94,7 +94,9 @@ export async function POST(req: NextRequest) {
       }
 
       case 'MATCH_COMPLETED': {
-        // const playerIds = payload.teams.map((p: any) => p[0].id) as string[]
+        const playerIds = payload.teamResults.teams.map(
+          (p: any) => p[0].id
+        ) as string[]
         // console.log({ playerIds })
         const queueId = payload.queueId
         const matchId = payload.matchId
@@ -102,12 +104,12 @@ export async function POST(req: NextRequest) {
           syncSingleMatch(queueId, matchId),
           leaderboardService.refreshLeaderboard(queueId),
         ])
-        // await Promise.all(
-        //   playerIds.map(async (id) => {
-        //     await redis.del(PLAYER_STATE_KEY(id))
-        //     globalEmitter.emit(`state-change:${id}`, { status: 'idle' })
-        //   })
-        // ).catch(console.error)
+        await Promise.all(
+          playerIds.map(async (id) => {
+            await redis.del(PLAYER_STATE_KEY(id))
+            globalEmitter.emit(`state-change:${id}`, { status: 'idle' })
+          })
+        ).catch(console.error)
 
         break
       }
