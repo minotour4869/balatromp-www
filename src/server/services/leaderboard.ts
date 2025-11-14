@@ -1,12 +1,41 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { db } from '@/server/db'
-import { leaderboardSnapshots, metadata } from '@/server/db/schema'
+import { leaderboardSnapshots, memoryLogs, metadata } from '@/server/db/schema'
 import { SEASON_3_START_DATE, SEASON_4_START_DATE } from '@/shared/seasons'
 import { and, desc, eq, gte, lt } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { redis } from '../redis'
 import { type LeaderboardEntry, botlatro_service } from './botlatro.service'
+
+// Memory profiling utility
+let currentRunId: string | null = null
+
+function logMemory(label: string, metadata?: Record<string, any>) {
+  if (!currentRunId) return
+
+  const mem = process.memoryUsage()
+  const data = {
+    runId: currentRunId,
+    label,
+    heapUsedMb: mem.heapUsed / 1024 / 1024,
+    heapTotalMb: mem.heapTotal / 1024 / 1024,
+    rssMb: mem.rss / 1024 / 1024,
+    externalMb: mem.external / 1024 / 1024,
+    metadata: metadata || null,
+  }
+
+  // Fire and forget
+  db.insert(memoryLogs).values(data).catch(err => {
+    console.error('[Memory Log Error]', err)
+  })
+
+  console.log(`[MEMORY ${label}]`, {
+    heap: `${Math.round(data.heapUsedMb)}MB`,
+    rss: `${Math.round(data.rssMb)}MB`,
+    ...metadata
+  })
+}
 
 export type LeaderboardResponse = {
   data: LeaderboardEntry[]
@@ -282,6 +311,9 @@ export class LeaderboardService {
   }
 
   async refreshLeaderboard(queue_id: string): Promise<LeaderboardResponse> {
+    currentRunId = crypto.randomUUID()
+    logMemory('refresh_start', { queue_id })
+
     try {
       console.log('Refreshing leaderboard for queue:', queue_id)
       const start = performance.now()
@@ -290,17 +322,24 @@ export class LeaderboardService {
       console.log(
         `Fetching fresh data took ${(end - start).toFixed(2)}ms for queue ${queue_id}`
       )
+
+      logMemory('after_api_fetch', { entries_count: fresh.length })
+
       const start2 = performance.now()
       console.log('Updating Redis cache for leaderboard:', queue_id)
       const zsetKey = this.getZSetKey(queue_id)
       const rawKey = this.getRawKey(queue_id)
       const timestamp = new Date().toISOString()
 
+      logMemory('before_initial_pipeline')
+
       // Initial pipeline for cache setup
       const initialPipeline = redis.pipeline()
       initialPipeline.setex(rawKey, 180, JSON.stringify(fresh))
       initialPipeline.del(zsetKey)
       await initialPipeline.exec()
+
+      logMemory('after_initial_pipeline')
 
       // Batch process entries to prevent memory issues with large datasets
       const BATCH_SIZE = 1000
@@ -317,17 +356,28 @@ export class LeaderboardService {
         }
 
         await batchPipeline.exec()
+        logMemory(`after_redis_batch_${Math.floor(i / BATCH_SIZE)}`, {
+          batch_index: Math.floor(i / BATCH_SIZE),
+          batch_size: batch.length
+        })
       }
 
       // Set expiration after all batches complete
       await redis.expire(zsetKey, 180)
 
+      logMemory('after_expire')
+
       const end2 = performance.now()
       console.log('Redis cache update took:', (end2 - start2).toFixed(2))
+
+      logMemory('refresh_end')
+      currentRunId = null
 
       return { data: fresh, isStale: false }
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
+      logMemory('refresh_error', { error: String(error) })
+      currentRunId = null
 
       // If botlatro fails, try to get the latest backup from the database
       const backupKey = this.getBackupKey(queue_id)
