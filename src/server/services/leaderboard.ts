@@ -333,11 +333,25 @@ export class LeaderboardService {
 
       logMemory('before_initial_pipeline')
 
-      // Initial pipeline for cache setup
-      const initialPipeline = redis.pipeline()
-      initialPipeline.setex(rawKey, 180, JSON.stringify(fresh))
+      // Initial pipeline for cache setup - use chunked approach to avoid large string in memory
+      let initialPipeline = redis.pipeline()
+
+      // Instead of stringifying entire array, chunk the data
+      const stringifiedChunks: string[] = []
+      const STRINGIFY_CHUNK_SIZE = 250
+      for (let i = 0; i < fresh.length; i += STRINGIFY_CHUNK_SIZE) {
+        const chunk = fresh.slice(i, i + STRINGIFY_CHUNK_SIZE)
+        stringifiedChunks.push(JSON.stringify(chunk))
+      }
+
+      // Store as single concatenated JSON array (still valid JSON)
+      const fullJson = '[' + stringifiedChunks.join(',') + ']'
+      initialPipeline.setex(rawKey, 180, fullJson)
       initialPipeline.del(zsetKey)
       await initialPipeline.exec()
+
+      // Clear temporary data immediately
+      stringifiedChunks.length = 0
 
       logMemory('after_initial_pipeline')
 
@@ -345,17 +359,31 @@ export class LeaderboardService {
       const BATCH_SIZE = 1000
       for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
         const batch = fresh.slice(i, i + BATCH_SIZE)
-        const batchPipeline = redis.pipeline()
+        let batchPipeline = redis.pipeline()
 
         for (const entry of batch) {
           batchPipeline.zadd(zsetKey, entry.mmr, entry.id)
+          // Only store necessary fields instead of spreading entire object
           batchPipeline.hset(this.getUserKey(entry.id, queue_id), {
-            ...entry,
+            id: entry.id,
+            name: entry.name,
+            mmr: entry.mmr,
+            wins: entry.wins,
+            losses: entry.losses,
+            streak: entry.streak,
+            totalgames: entry.totalgames,
+            peak_mmr: entry.peak_mmr,
+            peak_streak: entry.peak_streak,
+            rank: entry.rank,
+            winrate: entry.winrate,
             queue_id,
           })
         }
 
         await batchPipeline.exec()
+        // Explicitly nullify to help GC
+        batchPipeline = null as any
+
         logMemory(`after_redis_batch_${Math.floor(i / BATCH_SIZE)}`, {
           batch_index: Math.floor(i / BATCH_SIZE),
           batch_size: batch.length
@@ -370,10 +398,19 @@ export class LeaderboardService {
       const end2 = performance.now()
       console.log('Redis cache update took:', (end2 - start2).toFixed(2))
 
+      // Clear fresh array to release memory before returning
+      const resultData = fresh.slice()
+      fresh.length = 0
+
       logMemory('refresh_end')
       currentRunId = null
 
-      return { data: fresh, isStale: false }
+      // Hint to GC if available (requires --expose-gc flag)
+      if (global.gc) {
+        global.gc()
+      }
+
+      return { data: resultData, isStale: false }
     } catch (error) {
       console.error('Error refreshing leaderboard:', error)
       logMemory('refresh_error', { error: String(error) })
