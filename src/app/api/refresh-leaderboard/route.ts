@@ -8,7 +8,11 @@ import { headers } from 'next/headers'
 const SECURE_TOKEN = env.CRON_SECRET
 const CHANNEL_IDS = [RANKED_QUEUE_ID, VANILLA_QUEUE_ID]
 
-function logMemory(label: string, runId: string, metadata?: Record<string, any>) {
+function logMemory(
+  label: string,
+  runId: string,
+  metadata?: Record<string, any>
+) {
   const mem = process.memoryUsage()
   const data = {
     runId,
@@ -20,14 +24,10 @@ function logMemory(label: string, runId: string, metadata?: Record<string, any>)
     metadata: metadata || null,
   }
 
-  db.insert(memoryLogs).values(data).catch(err => {
-    console.error('[Memory Log Error]', err)
-  })
-
   console.log(`[MEMORY ${label}]`, {
     heap: `${Math.round(data.heapUsedMb)}MB`,
     rss: `${Math.round(data.rssMb)}MB`,
-    ...metadata
+    ...metadata,
   })
 }
 
@@ -46,9 +46,13 @@ export async function POST() {
     for (const channelId of CHANNEL_IDS) {
       try {
         console.log(`refreshing leaderboard for ${channelId}...`)
-        logMemory(`before_refresh_${channelId}`, cronRunId, { channel_id: channelId })
+        logMemory(`before_refresh_${channelId}`, cronRunId, {
+          channel_id: channelId,
+        })
         await leaderboardService.refreshLeaderboard(channelId)
-        logMemory(`after_refresh_${channelId}`, cronRunId, { channel_id: channelId })
+        logMemory(`after_refresh_${channelId}`, cronRunId, {
+          channel_id: channelId,
+        })
       } catch (err) {
         console.error('refresh failed:', err)
         logMemory('cron_error', cronRunId, { error: String(err) })

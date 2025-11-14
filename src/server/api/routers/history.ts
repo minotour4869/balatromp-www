@@ -1,6 +1,11 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
-import { memoryLogs, metadata, player_games, raw_history } from '@/server/db/schema'
+import {
+  memoryLogs,
+  metadata,
+  player_games,
+  raw_history,
+} from '@/server/db/schema'
 import { botlatro_service } from '@/server/services/botlatro.service'
 import { RANKED_QUEUE_ID } from '@/shared/constants'
 import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
@@ -24,15 +29,15 @@ function logMemory(label: string, metadata?: Record<string, any>) {
     metadata: metadata || null,
   }
 
-  // Fire and forget
-  db.insert(memoryLogs).values(data).catch(err => {
-    console.error('[Memory Log Error]', err)
-  })
+  // // Fire and forget
+  // db.insert(memoryLogs).values(data).catch(err => {
+  //   console.error('[Memory Log Error]', err)
+  // })
 
   console.log(`[MEMORY ${label}]`, {
     heap: `${Math.round(data.heapUsedMb)}MB`,
     rss: `${Math.round(data.rssMb)}MB`,
-    ...metadata
+    ...metadata,
   })
 }
 
@@ -46,15 +51,20 @@ async function pLimit<T>(
   const executing: Promise<void>[] = []
 
   for (const item of items) {
-    const p = Promise.resolve().then(() => fn(item)).then(result => {
-      results.push(result)
-    })
+    const p = Promise.resolve()
+      .then(() => fn(item))
+      .then((result) => {
+        results.push(result)
+      })
 
     executing.push(p)
 
     if (executing.length >= concurrency) {
       await Promise.race(executing)
-      executing.splice(executing.findIndex(e => e === p), 1)
+      executing.splice(
+        executing.findIndex((e) => e === p),
+        1
+      )
     }
   }
 
@@ -228,7 +238,7 @@ export async function syncSingleMatch(queue_id: string, match_id: number) {
   if (!response.ok) {
     throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
   }
-  const data = await response.json() as OverallHistoryResponse
+  const data = (await response.json()) as OverallHistoryResponse
 
   if (!data.matches.length) {
     throw new Error(`No match found for match_id ${match_id}`)
@@ -255,13 +265,15 @@ export async function syncHistory(queue_id: string) {
 
   logMemory('after_cursor_fetch', { cursor_value: cursor?.value })
 
-  const params = new URLSearchParams({ after_match_id: (cursor?.value ?? 1).toString() })
+  const params = new URLSearchParams({
+    after_match_id: (cursor?.value ?? 1).toString(),
+  })
   const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}?${params.toString()}`
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
   }
-  const data = await response.json() as OverallHistoryResponse
+  const data = (await response.json()) as OverallHistoryResponse
 
   logMemory('after_api_fetch', { matches_count: data.matches.length })
 
@@ -297,7 +309,10 @@ export async function syncHistory(queue_id: string) {
     await insertGameHistory(chunkedData[i]!, queue_id).catch((e) => {
       console.error(e)
     })
-    logMemory(`after_chunk_${i}`, { chunk_index: i, chunk_size: chunkedData[i]!.length })
+    logMemory(`after_chunk_${i}`, {
+      chunk_index: i,
+      chunk_size: chunkedData[i]!.length,
+    })
   }
 
   logMemory('sync_end')
@@ -326,7 +341,7 @@ export async function syncHistoryByDateRange(
   if (!response.ok) {
     throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
   }
-  const data = await response.json() as OverallHistoryResponse
+  const data = (await response.json()) as OverallHistoryResponse
 
   const chunkedData = chunk(data.matches, 100)
   for (const chunk of chunkedData) {

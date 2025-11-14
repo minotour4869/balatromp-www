@@ -25,13 +25,6 @@ function logMemory(label: string, metadata?: Record<string, any>) {
     metadata: metadata || null,
   }
 
-  // Fire and forget
-  db.insert(memoryLogs)
-    .values(data)
-    .catch((err) => {
-      console.error('[Memory Log Error]', err)
-    })
-
   console.log(`[MEMORY ${label}]`, {
     heap: `${Math.round(data.heapUsedMb)}MB`,
     rss: `${Math.round(data.rssMb)}MB`,
