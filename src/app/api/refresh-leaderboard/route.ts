@@ -57,13 +57,6 @@ export async function POST() {
     }
 
     logMemory('cron_end', cronRunId)
-
-    // Force GC between cron runs if available
-    if (global.gc) {
-      global.gc()
-      logMemory('after_gc', cronRunId)
-    }
-
     return Response.json({ success: true })
   } catch (err) {
     console.error('refresh failed:', err)
