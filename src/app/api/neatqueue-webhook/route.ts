@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
           status: 'queuing',
           queueStartTime: Date.now(),
         }
-        const userId = payload.new_players[0].id
+        const userId = payload.new_players?.[0]?.id
+        if (!userId) {
+          console.error('JOIN_QUEUE missing player ID', payload)
+          break
+        }
         console.log('-----JOIN QUEUE-----')
         console.dir(payload, { depth: null })
         console.log(userId)
@@ -94,9 +98,13 @@ export async function POST(req: NextRequest) {
       }
 
       case 'MATCH_COMPLETED': {
-        const playerIds = payload.teamResults.teams.map(
-          (p: any) => p[0].id
-        ) as string[]
+        const playerIds = payload.teamResults?.teams
+          ?.map((p: any) => p?.[0]?.id)
+          .filter(Boolean) as string[]
+        if (!playerIds?.length) {
+          console.error('MATCH_COMPLETED missing player IDs', payload)
+          break
+        }
         // console.log({ playerIds })
         const queueId = payload.queueId
         const matchId = payload.matchId
@@ -115,7 +123,11 @@ export async function POST(req: NextRequest) {
       }
 
       case 'LEAVE_QUEUE': {
-        const userId = payload.players_removed[0].id
+        const userId = payload.players_removed?.[0]?.id
+        if (!userId) {
+          console.error('LEAVE_QUEUE missing player ID', payload)
+          break
+        }
         await redis.del(PLAYER_STATE_KEY(userId))
         globalEmitter.emit(`state-change:${userId}`, { status: 'idle' })
         break
