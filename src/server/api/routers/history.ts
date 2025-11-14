@@ -8,6 +8,32 @@ import ky from 'ky'
 import { chunk } from 'remeda'
 import { z } from 'zod'
 
+// Limit concurrent promises to avoid memory spikes
+async function pLimit<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<any>
+): Promise<any[]> {
+  const results: any[] = []
+  const executing: Promise<void>[] = []
+
+  for (const item of items) {
+    const p = Promise.resolve().then(() => fn(item)).then(result => {
+      results.push(result)
+    })
+
+    executing.push(p)
+
+    if (executing.length >= concurrency) {
+      await Promise.race(executing)
+      executing.splice(executing.findIndex(e => e === p), 1)
+    }
+  }
+
+  await Promise.all(executing)
+  return results
+}
+
 export const history_router = createTRPCRouter({
   getTranscript: publicProcedure
     .input(
@@ -314,38 +340,36 @@ function processGameEntry(
   ]
 }
 export async function insertGameHistory(entries: any[], queue_id: string) {
-  const rawResults = await Promise.all(
-    entries.map(async (entry) => {
-      return db
-        .insert(raw_history)
-        .values({ entry, game_num: entry.match_id })
-        .returning()
-        .onConflictDoUpdate({
-          target: raw_history.game_num,
-          set: {
-            entry,
-          },
-        })
-        .then((res) => res[0])
-    })
-  ).then((res) => res.filter(Boolean))
+  // Limit concurrent DB operations to prevent memory bloat
+  const rawResults = await pLimit(entries, 10, async (entry) => {
+    return db
+      .insert(raw_history)
+      .values({ entry, game_num: entry.match_id })
+      .returning()
+      .onConflictDoUpdate({
+        target: raw_history.game_num,
+        set: {
+          entry,
+        },
+      })
+      .then((res) => res[0])
+  }).then((res) => res.filter(Boolean))
 
   const playerGameRows = rawResults.flatMap(({ entry, id, game_num }: any) => {
     return processGameEntry(id, game_num, entry, queue_id)
   })
 
-  await Promise.all(
-    playerGameRows.map(async (row) => {
-      return db
-        .insert(player_games)
-        .values(row)
-        .onConflictDoUpdate({
-          target: [player_games.playerId, player_games.gameNum],
-          set: row,
-        })
-        .then((res) => res[0])
-    })
-  )
+  // Limit concurrent player game inserts as well
+  await pLimit(playerGameRows, 20, async (row) => {
+    return db
+      .insert(player_games)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [player_games.playerId, player_games.gameNum],
+        set: row,
+      })
+      .then((res) => res[0])
+  })
 }
 
 export interface OverallHistoryResponse {
