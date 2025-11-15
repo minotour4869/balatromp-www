@@ -1,7 +1,11 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
-import { botlatro_service } from '@/server/services/botlatro.service'
+import type { SelectGames } from '@/server/db/types'
+import {
+  type PlayerMatch,
+  botlatro_service,
+} from '@/server/services/botlatro.service'
 import {
   RANKED_QUEUE_ID,
   SMALLWORLD_QUEUE_ID,
@@ -142,209 +146,35 @@ export const history_router = createTRPCRouter({
         queue_id: z.string().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(player_games)
-        .where(
-          and(
-            eq(player_games.playerId, input.user_id)
-            // eq(player_games.queueId, input.queue_id)
-          )
-        )
-        .orderBy(desc(player_games.gameTime))
-    }),
-  sync: publicProcedure
-    .input(
-      z.object({
-        queue_id: z.string().default(RANKED_QUEUE_ID),
+    .query(async ({ input }) => {
+      const matches = await botlatro_service.get_player_matches({
+        userId: input.user_id,
       })
-    )
-    .mutation(async ({ input }) => {
-      return syncHistory(input.queue_id)
-    }),
-  syncByDateRange: publicProcedure
-    .input(
-      z.object({
-        queue_id: z.string().default(RANKED_QUEUE_ID),
-        start_date: z.string().optional(),
-        end_date: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      return syncHistoryByDateRange(
-        input.queue_id,
-        input.start_date,
-        input.end_date
-      )
+      return normalizeBotlatroMatchHistory(matches)
     }),
 })
 
-export async function syncSingleMatch(queue_id: string, match_id: number) {
-  const params = new URLSearchParams({ match_id: match_id.toString() })
-  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}?${params.toString()}`
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
-  }
-  const data = (await response.json()) as OverallHistoryResponse
-
-  if (!data.matches.length) {
-    throw new Error(`No match found for match_id ${match_id}`)
-  }
-
-  await insertGameHistory(data.matches, queue_id).catch((e) => {
-    console.error(e)
-    throw e
-  })
-
-  return data.matches[0]
+function normalizeBotlatroMatchHistory(matches: PlayerMatch[]): SelectGames[] {
+  console.log(matches.filter((m) => m.opponents.length === 0))
+  return matches
+    .filter((m) => m.opponents.length > 0)
+    .map((match) => ({
+      playerId: match.player_id,
+      queueId: match.queue_id.toString(),
+      playerName: match.player_name,
+      gameId: match.match_id,
+      gameTime: new Date(match.created_at),
+      gameType: getGameType(match.queue_id.toString()),
+      gameNum: match.match_id,
+      playerMmr: match.mmr_after,
+      mmrChange: match.elo_change,
+      opponentId: match.opponents[0]!.user_id,
+      opponentName: match.opponents[0]!.name,
+      opponentMmr: match.opponents[0]!.mmr_after,
+      result: match.won ? 'win' : 'loss',
+    }))
 }
 
-export async function syncHistory(queue_id: string) {
-  const cursor = await db
-    .select()
-    .from(metadata)
-    .where(eq(metadata.key, `history_cursor_${queue_id}`))
-    .limit(1)
-    .then((res) => res[0])
-
-  const params = new URLSearchParams({
-    after_match_id: (cursor?.value ?? 1).toString(),
-  })
-  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}?${params.toString()}`
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
-  }
-  const data = (await response.json()) as OverallHistoryResponse
-
-  const lastGameId = data.matches.sort((a, b) => b.match_id - a.match_id)[0]
-    ?.match_id
-
-  if (!lastGameId) {
-    throw new Error('No last game found')
-  }
-
-  await db
-    .insert(metadata)
-    .values({
-      key: `history_cursor_${queue_id}`,
-      value: lastGameId.toString(),
-    })
-    .onConflictDoUpdate({
-      target: metadata.key,
-      set: {
-        key: `history_cursor_${queue_id}`,
-        value: lastGameId.toString(),
-      },
-    })
-
-  const chunkedData = chunk(data.matches, 100)
-
-  for (let i = 0; i < chunkedData.length; i++) {
-    await insertGameHistory(chunkedData[i]!, queue_id).catch((e) => {
-      console.error(e)
-    })
-  }
-
-  return data
-}
-
-export async function syncHistoryByDateRange(
-  queue_id: string,
-  start_date?: string,
-  end_date?: string
-) {
-  const params = new URLSearchParams()
-
-  if (start_date) {
-    params.set('start_date', start_date)
-  }
-
-  if (end_date) {
-    params.set('end_date', end_date)
-  }
-
-  const url = `http://balatro.virtualized.dev:4931/api/stats/overall-history/${queue_id}${params.toString() ? `?${params.toString()}` : ''}`
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
-  }
-  const data = (await response.json()) as OverallHistoryResponse
-
-  const chunkedData = chunk(data.matches, 100)
-  for (const chunk of chunkedData) {
-    await insertGameHistory(chunk, queue_id).catch((e) => {
-      console.error(e)
-    })
-  }
-  return data
-}
-
-function processGameEntry(
-  gameId: number,
-  game_num: number,
-  entry: any,
-  queue_id: string
-) {
-  const parsedEntry = typeof entry === 'string' ? JSON.parse(entry) : entry
-
-  // Validate required fields
-  if (!parsedEntry.winning_team) {
-    return []
-  }
-
-  if (!parsedEntry.players || parsedEntry.players.length < 2) {
-    return []
-  }
-
-  if (!parsedEntry.players[0]?.user_id || !parsedEntry.players[1]?.user_id) {
-    return []
-  }
-
-  const player0 = parsedEntry.players[0]
-  const player1 = parsedEntry.players[1]
-
-  // Determine results based on winning_team
-  const p0result = parsedEntry.winning_team === player0.team ? 'win' : 'loss'
-  const p1result = parsedEntry.winning_team === player1.team ? 'win' : 'loss'
-
-  return [
-    {
-      gameId,
-      gameNum: game_num,
-      queueId: queue_id,
-      gameTime: new Date(parsedEntry.created_at),
-      gameType: getGameType(queue_id),
-      mmrChange: Number.parseFloat(player0.elo_change ?? 0),
-      opponentId: player1.user_id,
-      opponentMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
-      opponentName: player1.name ?? 'Unknown',
-      playerId: player0.user_id,
-      playerMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
-      playerName: player0.name ?? 'Unknown',
-      result: p0result,
-      won: parsedEntry.winning_team === player0.team,
-    },
-    {
-      gameId,
-      gameNum: game_num,
-      queueId: queue_id,
-      gameTime: new Date(parsedEntry.created_at),
-      gameType: getGameType(queue_id),
-      mmrChange: Number.parseFloat(player1.elo_change ?? 0),
-      opponentId: player0.user_id,
-      opponentMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
-      opponentName: player0.name ?? 'Unknown',
-      playerId: player1.user_id,
-      playerMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
-      playerName: player1.name ?? 'Unknown',
-      result: p1result,
-      won: parsedEntry.winning_team === player1.team,
-    },
-  ]
-}
 function getGameType(queue_id: string) {
   switch (queue_id) {
     case RANKED_QUEUE_ID:
@@ -356,59 +186,4 @@ function getGameType(queue_id: string) {
     default:
       return 'unknown'
   }
-}
-export async function insertGameHistory(entries: any[], queue_id: string) {
-  // Limit concurrent DB operations to prevent memory bloat
-  const rawResults = await pLimit(entries, 10, async (entry) => {
-    return db
-      .insert(raw_history)
-      .values({ entry, game_num: entry.match_id })
-      .returning()
-      .onConflictDoUpdate({
-        target: raw_history.game_num,
-        set: {
-          entry,
-        },
-      })
-      .then((res) => res[0])
-  }).then((res) => res.filter(Boolean))
-
-  const playerGameRows = rawResults.flatMap(({ entry, id, game_num }: any) => {
-    return processGameEntry(id, game_num, entry, queue_id)
-  })
-
-  // Limit concurrent player game inserts as well
-  await pLimit(playerGameRows, 20, async (row) => {
-    return db
-      .insert(player_games)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [player_games.playerId, player_games.gameNum],
-        set: row,
-      })
-      .then((res) => res[0])
-  })
-}
-
-export interface OverallHistoryResponse {
-  matches: Match[]
-}
-
-export interface Match {
-  match_id: number
-  winning_team: number
-  deck: string | null
-  stake: string | null
-  best_of_3: boolean
-  best_of_5: boolean
-  created_at: string
-  players: Player[]
-}
-
-export interface Player {
-  user_id: string
-  name: string
-  team: number
-  elo_change: number
-  mmr_after: number
 }

@@ -1,6 +1,5 @@
 import crypto from 'node:crypto'
 import { globalEmitter } from '@/lib/events'
-import { syncSingleMatch } from '@/server/api/routers/history'
 import type { PlayerState } from '@/server/api/routers/player-state'
 import { PLAYER_STATE_KEY, redis } from '@/server/redis'
 import { leaderboardService } from '@/server/services/leaderboard'
@@ -105,11 +104,8 @@ export async function POST(req: NextRequest) {
           console.error('MATCH_COMPLETED missing player IDs', payload)
           break
         }
-        // console.log({ playerIds })
         const queueId = payload.queueId
-        const matchId = payload.matchId
         await Promise.allSettled([
-          syncSingleMatch(queueId, matchId),
           leaderboardService.refreshLeaderboard(queueId),
         ])
         await Promise.all(

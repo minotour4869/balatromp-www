@@ -3,7 +3,7 @@ import { db } from '../db'
 import { transcripts } from '../db/schema'
 import { redis } from '../redis'
 
-const BOTLATRO_URL = 'http://balatro.virtualized.dev:4931/api/stats/'
+const BOTLATRO_URL = 'http://balatro.virtualized.dev:4931/'
 
 export const TRANSCRIPT_CACHE_KEY = (gameNumber: number) =>
   `transcript:${gameNumber}`
@@ -11,7 +11,7 @@ export const TRANSCRIPT_CACHE_KEY = (gameNumber: number) =>
 export const botlatro_service = {
   get_leaderboard: async (queue_id: string) => {
     const response = await fetch(
-      `${BOTLATRO_URL}leaderboard/${queue_id}?limit=100000`
+      `${BOTLATRO_URL}api/stats/leaderboard/${queue_id}?limit=100000`
     )
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
@@ -36,62 +36,28 @@ export const botlatro_service = {
 
     return fixed
   },
-
-  get_history: async (
-    player_ids: string[],
-    queue_id: number,
-    limit?: number
-  ) => {
-    const results: Record<string, MatchHistoryEntry[]> = {}
-
-    for (const user_id of player_ids) {
-      try {
-        const params = new URLSearchParams()
-        if (limit) {
-          params.set('limit', limit.toString())
-        }
-
-        const url = `${BOTLATRO_URL}history/${user_id}/${queue_id}${params.toString() ? `?${params.toString()}` : ''}`
-        const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error(
-            `HTTP Error: ${response.status} ${response.statusText}`
-          )
-        }
-        const data = (await response.json()) as { matches: MatchHistoryEntry[] }
-
-        results[user_id] = data.matches
-      } catch (error) {
-        console.error(`Error fetching history for user ${user_id}:`, error)
-        results[user_id] = []
-      }
-    }
-
-    return results
-  },
-
-  get_overall_history: async (queue_id: number, limit?: number) => {
+  get_player_matches: async ({
+    userId,
+    queueId,
+    limit,
+  }: { userId: string; limit?: number; queueId?: string }) => {
     try {
       const params = new URLSearchParams()
       if (limit) {
         params.set('limit', limit.toString())
       }
+      if (queueId) params.set('queue_id', queueId)
 
-      const url = `${BOTLATRO_URL}overall-history/${queue_id}${params.toString() ? `?${params.toString()}` : ''}`
+      const url = `${BOTLATRO_URL}api/players/${userId}/matches${params.toString() ? `?${params.toString()}` : ''}`
       const response = await fetch(url)
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
       }
-      const data = (await response.json()) as {
-        matches: OverallMatchHistoryEntry[]
-      }
+      const data = (await response.json()) as PlayerMatchesResponse
 
       return data.matches
     } catch (error) {
-      console.error(
-        `Error fetching overall history for queue ${queue_id}:`,
-        error
-      )
+      console.error(`Error fetching history for user ${userId}:`, error)
       return []
     }
   },
@@ -152,7 +118,7 @@ export type LeaderboardEntry = {
   streak: number
   totalgames: number
   decay?: number
-  ign?: any
+  ign?: string
   peak_mmr: number
   peak_streak: number
   rank: number
@@ -163,20 +129,16 @@ export type LeaderboardResponse = {
   leaderboard: LeaderboardEntry[]
 }
 
-export type MatchHistoryEntry = {
+export type PlayerMatch = {
   match_id: number
   player_name: string
+  player_id: string
+  queue_id: number
   mmr_after: number
   won: boolean
   elo_change: number
   team: number
-  opponents: Array<{
-    user_id: string
-    name: string
-    team: number
-    elo_change: number
-    mmr_after: number
-  }>
+  opponents: Array<Opponent>
   deck: string | null
   stake: string | null
   best_of_3: boolean
@@ -185,24 +147,14 @@ export type MatchHistoryEntry = {
   winning_team: number
 }
 
-export type OverallMatchHistoryEntry = {
-  match_id: number
-  player_name: string
-  mmr_after: number
-  won: boolean
-  elo_change: number
+export type PlayerMatchesResponse = {
+  matches: PlayerMatch[]
+}
+
+export type Opponent = {
+  user_id: string
+  name: string
   team: number
-  opponents: Array<{
-    user_id: string
-    name: string
-    team: number
-    elo_change: number
-    mmr_after: number
-  }>
-  deck: string | null
-  stake: string | null
-  best_of_3: boolean
-  best_of_5: boolean
-  created_at: string
-  winning_team: number
+  elo_change: number
+  mmr_after: number
 }
