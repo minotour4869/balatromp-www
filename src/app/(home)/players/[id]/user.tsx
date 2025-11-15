@@ -543,7 +543,7 @@ function UserInfoComponent() {
                   value={leaderboardFilter}
                   onValueChange={setLeaderboardFilter}
                 >
-                  <SelectTrigger className='h-9 w-[150px]'>
+                  <SelectTrigger className='h-9 w-[160px]'>
                     <SelectValue placeholder='Leaderboard' />
                   </SelectTrigger>
                   <SelectContent>
@@ -573,9 +573,6 @@ function UserInfoComponent() {
                     </SelectItem>
                     <SelectItem value='season2'>
                       {getSeasonDisplayName('season2')}
-                    </SelectItem>
-                    <SelectItem value='all'>
-                      {getSeasonDisplayName('all')}
                     </SelectItem>
                   </SelectContent>
                 </Select>
