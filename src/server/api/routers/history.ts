@@ -353,6 +353,8 @@ function getGameType(queue_id: string) {
       return 'smallworld'
     case VANILLA_QUEUE_ID:
       return 'vanilla'
+    default:
+      return 'unknown'
   }
 }
 export async function insertGameHistory(entries: any[], queue_id: string) {
