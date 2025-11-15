@@ -2,7 +2,11 @@ import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
 import { metadata, player_games, raw_history } from '@/server/db/schema'
 import { botlatro_service } from '@/server/services/botlatro.service'
-import { RANKED_QUEUE_ID } from '@/shared/constants'
+import {
+  RANKED_QUEUE_ID,
+  SMALLWORLD_QUEUE_ID,
+  VANILLA_QUEUE_ID,
+} from '@/shared/constants'
 import { and, desc, eq, gt, lt } from 'drizzle-orm'
 import { chunk } from 'remeda'
 import { z } from 'zod'
@@ -135,7 +139,7 @@ export const history_router = createTRPCRouter({
     .input(
       z.object({
         user_id: z.string(),
-        queue_id: z.string().default(RANKED_QUEUE_ID),
+        queue_id: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -144,11 +148,11 @@ export const history_router = createTRPCRouter({
         .from(player_games)
         .where(
           and(
-            eq(player_games.playerId, input.user_id),
-            eq(player_games.queueId, input.queue_id)
+            eq(player_games.playerId, input.user_id)
+            // eq(player_games.queueId, input.queue_id)
           )
         )
-        .orderBy(desc(player_games.gameNum))
+        .orderBy(desc(player_games.gameTime))
     }),
   sync: publicProcedure
     .input(
@@ -312,7 +316,7 @@ function processGameEntry(
       gameNum: game_num,
       queueId: queue_id,
       gameTime: new Date(parsedEntry.created_at),
-      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      gameType: getGameType(queue_id),
       mmrChange: Number.parseFloat(player0.elo_change ?? 0),
       opponentId: player1.user_id,
       opponentMmr: Number.parseFloat(player1.mmr_after ?? player1.mmr ?? 0),
@@ -328,7 +332,7 @@ function processGameEntry(
       gameNum: game_num,
       queueId: queue_id,
       gameTime: new Date(parsedEntry.created_at),
-      gameType: RANKED_QUEUE_ID === queue_id ? 'ranked' : 'unranked',
+      gameType: getGameType(queue_id),
       mmrChange: Number.parseFloat(player1.elo_change ?? 0),
       opponentId: player0.user_id,
       opponentMmr: Number.parseFloat(player0.mmr_after ?? player0.mmr ?? 0),
@@ -340,6 +344,16 @@ function processGameEntry(
       won: parsedEntry.winning_team === player1.team,
     },
   ]
+}
+function getGameType(queue_id: string) {
+  switch (queue_id) {
+    case RANKED_QUEUE_ID:
+      return 'ranked'
+    case SMALLWORLD_QUEUE_ID:
+      return 'smallworld'
+    case VANILLA_QUEUE_ID:
+      return 'vanilla'
+  }
 }
 export async function insertGameHistory(entries: any[], queue_id: string) {
   // Limit concurrent DB operations to prevent memory bloat
