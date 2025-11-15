@@ -1,14 +1,9 @@
 import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 import { db } from '@/server/db'
-import {
-  memoryLogs,
-  metadata,
-  player_games,
-  raw_history,
-} from '@/server/db/schema'
+import { metadata, player_games, raw_history } from '@/server/db/schema'
 import { botlatro_service } from '@/server/services/botlatro.service'
 import { RANKED_QUEUE_ID } from '@/shared/constants'
-import { and, desc, eq, gt, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, lt } from 'drizzle-orm'
 import { chunk } from 'remeda'
 import { z } from 'zod'
 
