@@ -1,6 +1,8 @@
 import { env } from '@/env'
+import { redis } from '@/server/redis'
 
 const DISCORD_URL = 'https://discord.com/api/v10'
+const CACHE_TTL = 60 * 60 * 24 // 24 hours in seconds
 
 async function fetchWithRetry(
   url: string,
@@ -32,6 +34,15 @@ async function fetchWithRetry(
 
 export const discord_service = {
   get_user_by_id: async (user_id: string) => {
+    const cache_key = `discord:user:${user_id}`
+
+    // Try to get from cache
+    const cached = await redis.get(cache_key)
+    if (cached) {
+      return JSON.parse(cached) as DiscordUser & { avatar_url: string }
+    }
+
+    // Fetch from Discord API
     const res = await fetchWithRetry(`${DISCORD_URL}/users/${user_id}`, {
       headers: {
         Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
@@ -39,10 +50,15 @@ export const discord_service = {
     })
     const res_json = (await res.json()) as DiscordUser
 
-    return {
+    const user_data = {
       ...res_json,
       avatar_url: `https://cdn.discordapp.com/avatars/${user_id}/${res_json.avatar}.png`,
     }
+
+    // Cache the result
+    await redis.setEx(cache_key, CACHE_TTL, JSON.stringify(user_data))
+
+    return user_data
   },
 }
 export type DiscordUser = {
