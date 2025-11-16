@@ -172,6 +172,7 @@ function normalizeBotlatroMatchHistory(matches: PlayerMatch[]): SelectGames[] {
       opponentName: match.opponents[0]!.name,
       opponentMmr: match.opponents[0]!.mmr_after,
       result: match.won ? 'win' : 'loss',
+      season: 'season4',
     }))
 }
 

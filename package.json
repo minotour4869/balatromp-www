@@ -14,6 +14,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo",
+    "migrate:season": "bun run  scripts/migrate-add-season-column.ts",
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit"

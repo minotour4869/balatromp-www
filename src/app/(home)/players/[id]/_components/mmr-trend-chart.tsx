@@ -14,7 +14,11 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import type { SelectGames } from '@/server/db/types'
-import { type Season, filterGamesBySeason, getSeasonDisplayName } from '@/shared/seasons'
+import {
+  type Season,
+  filterGamesBySeason,
+  getSeasonDisplayName,
+} from '@/shared/seasons'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 const chartConfig = {
@@ -24,12 +28,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function MmrTrendChart({ 
-  games, 
-  season = 'all' 
-}: { 
-  games: SelectGames[],
-  season?: Season 
+export function MmrTrendChart({
+  games,
+  season = 'season4',
+}: {
+  games: SelectGames[]
+  season?: Season
 }) {
   // Filter games by season if a specific season is selected
   const seasonFilteredGames = filterGamesBySeason(games, season)

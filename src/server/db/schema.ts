@@ -43,10 +43,12 @@ export const player_games = pgTable(
     opponentName: text('opponent_name').notNull(),
     opponentMmr: real('opponent_mmr').notNull(),
     result: text('result').notNull(),
+    season: text('season'),
   },
   (t) => [
     primaryKey({ columns: [t.playerId, t.gameNum] }),
     uniqueIndex('game_num_per_player_idx').on(t.playerId, t.gameNum),
+    index('season_idx').on(t.season),
   ]
 )
 

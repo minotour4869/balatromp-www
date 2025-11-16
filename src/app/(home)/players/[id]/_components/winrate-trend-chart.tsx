@@ -15,7 +15,11 @@ import {
 } from '@/components/ui/chart'
 import { Slider } from '@/components/ui/slider'
 import type { SelectGames } from '@/server/db/types'
-import { type Season, filterGamesBySeason, getSeasonDisplayName } from '@/shared/seasons'
+import {
+  type Season,
+  filterGamesBySeason,
+  getSeasonDisplayName,
+} from '@/shared/seasons'
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
@@ -26,12 +30,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function WinrateTrendChart({ 
-  games, 
-  season = 'all' 
-}: { 
-  games: SelectGames[],
-  season?: Season 
+export function WinrateTrendChart({
+  games,
+  season = 'season4',
+}: {
+  games: SelectGames[]
+  season?: Season
 }) {
   const [gamesWindow, setGamesWindow] = useState(30)
 
