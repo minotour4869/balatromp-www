@@ -1,4 +1,12 @@
 {
-  "pages": [ "blitz", "traditional","ranked","vanilla", "badlatro", "weekly","Major-and-Minor-league"],
+  "pages": [
+    "standard",
+    "vanilla",
+    "sandbox",
+    "smallworld",
+    "badlatro",
+    "weekly",
+    "Major-and-Minor-league"
+  ],
   "defaultOpen": true
 }
