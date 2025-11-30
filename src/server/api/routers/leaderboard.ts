@@ -14,7 +14,7 @@ export const leaderboard_router = createTRPCRouter({
     .input(
       z.object({
         channel_id: z.string(),
-        season: SeasonSchema.optional().default('season4'),
+        season: SeasonSchema.optional().default('season5'),
         page: z.number().min(1).optional().default(1),
         pageSize: z.number().min(1).max(100).optional().default(50),
         search: z.string().optional(),
@@ -127,7 +127,7 @@ export const leaderboard_router = createTRPCRouter({
           isStale: false,
         }
       }
-      // For Season 4 (current) or all, use the current data
+      // For Season 5 (current) or all, use the current data
       const result = await service.getLeaderboard(input.channel_id, {
         page: input.page,
         pageSize: input.pageSize,
@@ -164,7 +164,7 @@ export const leaderboard_router = createTRPCRouter({
       z.object({
         channel_id: z.string(),
         user_id: z.string(),
-        season: SeasonSchema.optional().default('season4'),
+        season: SeasonSchema.optional().default('season5'),
       })
     )
     .query(async ({ input }) => {
@@ -192,7 +192,7 @@ export const leaderboard_router = createTRPCRouter({
           isStale: false,
         }
       }
-      // For Season 4 (current) or all, use the current data
+      // For Season 5 (current) or all, use the current data
       const result = await service.getUserRank(input.channel_id, input.user_id)
       if (!result) return null
       return {

@@ -142,7 +142,7 @@ export function LeaderboardPage() {
   const [queryParams, setQueryParams] = useQueryStates(
     {
       type: parseAsString.withDefault('ranked'),
-      season: parseAsString.withDefault('season4'),
+      season: parseAsString.withDefault('season5'),
       page: parseAsInteger.withDefault(1),
       search: parseAsString,
       minGames: parseAsInteger,
@@ -169,7 +169,7 @@ export function LeaderboardPage() {
   // Validate season
   const season = SeasonSchema.safeParse(rawSeason).success
     ? (rawSeason as Season)
-    : 'season4'
+    : 'season5'
 
   const [gamesAmount, setGamesAmount] = useState([
     minGames ?? 0,
@@ -370,8 +370,8 @@ export function LeaderboardPage() {
                       <SelectValue placeholder='Select season' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='season4'>
-                        {getSeasonDisplayName('season4')}
+                      <SelectItem value='season5'>
+                        {getSeasonDisplayName('season5')}
                       </SelectItem>
                       <SelectItem value='season3'>
                         {getSeasonDisplayName('season3')}

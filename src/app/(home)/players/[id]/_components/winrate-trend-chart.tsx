@@ -32,7 +32,7 @@ const chartConfig = {
 
 export function WinrateTrendChart({
   games,
-  season = 'season4',
+  season = 'season5',
 }: {
   games: SelectGames[]
   season?: Season

@@ -27,10 +27,10 @@ export default async function Home({
   const params = await searchParams
 
   const type = params.type ?? 'ranked'
-  const rawSeason = params.season ?? 'season4'
+  const rawSeason = params.season ?? 'season5'
   const season = SeasonSchema.safeParse(rawSeason).success
     ? (rawSeason as Season)
-    : 'season4'
+    : 'season5'
   const page = params.page ? Number.parseInt(params.page) : 1
   const search = params.search
   const minGames = params.minGames

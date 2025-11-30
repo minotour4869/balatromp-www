@@ -30,7 +30,7 @@ const chartConfig = {
 
 export function MmrTrendChart({
   games,
-  season = 'season4',
+  season = 'season5',
 }: {
   games: SelectGames[]
   season?: Season

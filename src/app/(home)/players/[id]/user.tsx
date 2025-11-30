@@ -76,7 +76,7 @@ function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
   const timeZone = useTimeZone()
-  const [season, setSeason] = useState<Season>('season4')
+  const [season, setSeason] = useState<Season>('season5')
 
   const [leaderboardFilter, setLeaderboardFilter] = useState('all')
   const { id } = useParams()
@@ -565,8 +565,8 @@ function UserInfoComponent() {
                     <SelectValue placeholder='Season' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='season4'>
-                      {getSeasonDisplayName('season4')}
+                    <SelectItem value='season5'>
+                      {getSeasonDisplayName('season5')}
                     </SelectItem>
                     <SelectItem value='season3'>
                       {getSeasonDisplayName('season3')}
