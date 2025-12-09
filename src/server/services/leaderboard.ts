@@ -233,12 +233,13 @@ export class LeaderboardService {
     }
 
     try {
-        // Path to the Season 4 snapshot file
+        // Path to the Season 4 snapshot file (change depending on queue id)
+        // TODO: Make this better, this is kind of scuffed but I can't be bothered to figure out how to utilize the db
         const filePath = path.join(
             process.cwd(),
             'src',
             'data',
-            'leaderboard-snapshot-eos4.json'
+            `leaderboard-snapshot-eos4-${queue_id}.json`
         )
 
         // Read and parse the file
