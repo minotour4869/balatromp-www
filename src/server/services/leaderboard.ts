@@ -74,6 +74,7 @@ export type UserRankResponse = {
 export class LeaderboardService {
   private season2DataCache: Map<string, LeaderboardEntry[]> = new Map()
   private season3DataCache: Map<string, LeaderboardEntry[]> = new Map()
+  private season4DataCache: Map<string, LeaderboardEntry[]> = new Map()
 
   private getZSetKey(queue_id: string) {
     return `zset:leaderboard:${queue_id}`
@@ -219,6 +220,79 @@ export class LeaderboardService {
     user_id: string
   ): Promise<LeaderboardEntry | null> {
     const sortedLeaderboard = await this.getSeason3Leaderboard(queue_id)
+    const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
+    return userEntry || null
+  }
+
+  // Load Season 4 data from the snapshot file
+  private loadSeason4Data(queue_id: string): LeaderboardEntry[] {
+    // Check if data is already cached
+    if (this.season4DataCache.has(queue_id)) {
+        const cached = this.season4DataCache.get(queue_id)
+        if (cached) return cached
+    }
+
+    try {
+        // Path to the Season 4 snapshot file
+        const filePath = path.join(
+            process.cwd(),
+            'src',
+            'data',
+            'leaderboard-snapshot-eos4.json'
+        )
+
+        // Read and parse the file
+        const fileContent = fs.readFileSync(filePath, 'utf-8')
+        const data = JSON.parse(fileContent)
+
+        // Extract and format the leaderboard entries
+        const entries = data.alltime.map((entry: any) => ({
+          id: entry.id,
+          name: entry.name,
+          mmr: entry.data.mmr,
+          wins: entry.data.wins,
+          losses: entry.data.losses,
+          streak: entry.data.streak,
+          totalgames: entry.data.totalgames,
+          peak_mmr: entry.data.peak_mmr,
+          peak_streak: entry.data.peak_streak,
+          rank: entry.data.rank,
+          winrate: entry.data.winrate,
+        }))
+
+        // Cache the data for future requests
+        this.season4DataCache.set(queue_id, entries)
+
+        return entries
+    } catch (error) {
+        console.error('Error loading Season 4 data:', error)
+        return []
+    }
+  }
+
+  // Get Season 4 leaderboard data
+  async getSeason4Leaderboard(queue_id: string): Promise<LeaderboardEntry[]> {
+    const entries = this.loadSeason4Data(queue_id)
+
+    // Sort entries by MMR in descending order
+    const sortedEntries = [...entries].sort((a, b) => b.mmr - a.mmr)
+
+    // Recalculate ranks based on sorted order
+    return sortedEntries.map((entry, idx) => ({
+        ...entry,
+        rank: idx + 1,
+    }))
+  }
+
+  // Get Season 4 user rank data
+  async getSeason4UserRank(
+    queue_id: string,
+    user_id: string
+  ): Promise<LeaderboardEntry | null> {
+    // Get the sorted leaderboard with recalculated ranks
+    const sortedLeaderboard = await this.getSeason4Leaderboard(queue_id)
+
+    // Find the user entry in the sorted leaderboard
     const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
     return userEntry || null
   }
