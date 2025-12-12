@@ -178,10 +178,10 @@ export function LeaderboardPage() {
 
   // Derive sort column and direction from query params with defaults
   const sortColumn =
-    sortBy || (['season2', 'season3'].includes(season) ? 'mmr' : 'rank')
+    sortBy || (['season2', 'season3', 'season4', 'season5'].includes(season) ? 'mmr' : 'rank')
   const sortDirection =
     (sortOrder as 'asc' | 'desc') ||
-    (['season2', 'season3'].includes(season) ? 'desc' : 'asc')
+    (['season2', 'season3', 'season4', 'season5'].includes(season) ? 'desc' : 'asc')
 
   // Track previous season to only reset sort when season actually changes
   const prevSeasonRef = useRef(season)
@@ -192,7 +192,7 @@ export function LeaderboardPage() {
 
     // Only reset sort if season actually changed AND user hasn't explicitly set a sort
     if (seasonChanged && !sortBy) {
-      if (['season2', 'season3'].includes(season)) {
+      if (['season2', 'season3', 'season4', 'season5'].includes(season)) {
         setQueryParams({ sortBy: 'mmr', sortOrder: 'desc' })
       } else {
         setQueryParams({ sortBy: 'rank', sortOrder: 'asc' })
@@ -289,14 +289,14 @@ export function LeaderboardPage() {
       // Read current sort values directly from queryParams to avoid stale closure
       const currentSortBy =
         queryParams.sortBy ||
-        (['season2', 'season3'].includes(season) ? 'mmr' : 'rank')
+        (['season2', 'season3', 'season4'].includes(season) ? 'mmr' : 'rank')
       const currentSortOrder =
         (queryParams.sortOrder as 'asc' | 'desc') ||
-        (['season2', 'season3'].includes(season) ? 'desc' : 'asc')
-      const defaultColumn = ['season2', 'season3'].includes(season)
+        (['season2', 'season3', 'season4'].includes(season) ? 'desc' : 'asc')
+      const defaultColumn = ['season2', 'season3', 'season4'].includes(season)
         ? 'mmr'
         : 'rank'
-      const defaultDirection = ['season2', 'season3'].includes(season)
+      const defaultDirection = ['season2', 'season3', 'season4'].includes(season)
         ? 'desc'
         : 'asc'
 
@@ -372,6 +372,9 @@ export function LeaderboardPage() {
                     <SelectContent>
                       <SelectItem value='season5'>
                         {getSeasonDisplayName('season5')}
+                      </SelectItem>
+                      <SelectItem value='season4'>
+                        {getSeasonDisplayName('season4')}
                       </SelectItem>
                       <SelectItem value='season3'>
                         {getSeasonDisplayName('season3')}
