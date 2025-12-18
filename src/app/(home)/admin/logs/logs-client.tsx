@@ -44,7 +44,11 @@ export function LogsClient() {
         throw new Error('Failed to fetch logs')
       }
       const data = await response.json()
-      setLogs(data)
+      // Sort logs by creation time
+      const sortedLogs = data.sort((a: LogFile, b: LogFile) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      setLogs(sortedLogs)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
