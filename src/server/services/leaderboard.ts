@@ -141,7 +141,7 @@ export class LeaderboardService {
     }))
   }
 
-  // Get Season 2 user rank data
+  // Get Season 1 user rank data
   async getSeason1UserRank(
       queue_id: string,
       user_id: string
