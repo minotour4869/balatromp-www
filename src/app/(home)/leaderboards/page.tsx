@@ -43,7 +43,7 @@ export default async function Home({
   const sortOrder = params.sortOrder as 'asc' | 'desc' | undefined
 
   const getChannelId = (type: string, season: Season) => {
-    const isOldSeason = season === 'season2' || season === 'season3'
+    const isOldSeason = season === 'season1' || season === 'season2' || season === 'season3'
     if (type === 'vanilla') {
       return isOldSeason ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID
     }

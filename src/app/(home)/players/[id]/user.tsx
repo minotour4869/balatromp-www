@@ -309,7 +309,7 @@ function UserInfoComponent() {
                   >
                     <Calendar className='mr-1 h-3 w-3' />
                     <span>
-                      {season === 'season3' ? 'Season 3' : season === 'season4' ? 'Season 4' : 'Season 2'} Rank:{' '}
+                      {getSeasonDisplayName(season)} Rank:{' '}
                       {isNonNullish(historicRankedData.rank)
                         ? `#${historicRankedData.rank}`
                         : 'N/A'}

@@ -178,10 +178,10 @@ export function LeaderboardPage() {
 
   // Derive sort column and direction from query params with defaults
   const sortColumn =
-    sortBy || (['season2', 'season3', 'season4', 'season5'].includes(season) ? 'mmr' : 'rank')
+    sortBy || (['season1', 'season2', 'season3', 'season4', 'season5'].includes(season) ? 'mmr' : 'rank')
   const sortDirection =
     (sortOrder as 'asc' | 'desc') ||
-    (['season2', 'season3', 'season4', 'season5'].includes(season) ? 'desc' : 'asc')
+    (['season1', 'season2', 'season3', 'season4', 'season5'].includes(season) ? 'desc' : 'asc')
 
   // Track previous season to only reset sort when season actually changes
   const prevSeasonRef = useRef(season)
@@ -192,7 +192,7 @@ export function LeaderboardPage() {
 
     // Only reset sort if season actually changed AND user hasn't explicitly set a sort
     if (seasonChanged && !sortBy) {
-      if (['season2', 'season3', 'season4', 'season5'].includes(season)) {
+      if (['season1', 'season2', 'season3', 'season4', 'season5'].includes(season)) {
         setQueryParams({ sortBy: 'mmr', sortOrder: 'desc' })
       } else {
         setQueryParams({ sortBy: 'rank', sortOrder: 'asc' })
@@ -202,7 +202,7 @@ export function LeaderboardPage() {
 
   // Determine channel ID based on leaderboard type and season
   const channelId = useMemo(() => {
-    const isOldSeason = season === 'season2' || season === 'season3'
+    const isOldSeason = season === 'season1' || season === 'season2' || season === 'season3'
     if (leaderboardType === 'vanilla') {
       return isOldSeason ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID
     }
@@ -289,14 +289,14 @@ export function LeaderboardPage() {
       // Read current sort values directly from queryParams to avoid stale closure
       const currentSortBy =
         queryParams.sortBy ||
-        (['season2', 'season3', 'season4'].includes(season) ? 'mmr' : 'rank')
+        (['season1', 'season2', 'season3', 'season4'].includes(season) ? 'mmr' : 'rank')
       const currentSortOrder =
         (queryParams.sortOrder as 'asc' | 'desc') ||
-        (['season2', 'season3', 'season4'].includes(season) ? 'desc' : 'asc')
-      const defaultColumn = ['season2', 'season3', 'season4'].includes(season)
+        (['season1', 'season2', 'season3', 'season4'].includes(season) ? 'desc' : 'asc')
+      const defaultColumn = ['season1', 'season2', 'season3', 'season4'].includes(season)
         ? 'mmr'
         : 'rank'
-      const defaultDirection = ['season2', 'season3', 'season4'].includes(season)
+      const defaultDirection = ['season1', 'season2', 'season3', 'season4'].includes(season)
         ? 'desc'
         : 'asc'
 
@@ -381,6 +381,9 @@ export function LeaderboardPage() {
                       </SelectItem>
                       <SelectItem value='season2'>
                         {getSeasonDisplayName('season2')}
+                      </SelectItem>
+                      <SelectItem value='season1'>
+                        {getSeasonDisplayName('season1')}
                       </SelectItem>
                     </SelectContent>
                   </Select>

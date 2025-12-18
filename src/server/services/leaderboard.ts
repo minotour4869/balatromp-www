@@ -72,12 +72,86 @@ export type UserRankResponse = {
 } | null
 
 export class LeaderboardService {
+  private season1DataCache: Map<string, LeaderboardEntry[]> = new Map()
   private season2DataCache: Map<string, LeaderboardEntry[]> = new Map()
   private season3DataCache: Map<string, LeaderboardEntry[]> = new Map()
   private season4DataCache: Map<string, LeaderboardEntry[]> = new Map()
 
   private getZSetKey(queue_id: string) {
     return `zset:leaderboard:${queue_id}`
+  }
+
+  // Load Season 1 data from the snapshot file
+  private loadSeason1Data(queue_id: string): LeaderboardEntry[] {
+    // Check if data is already cached
+    if (this.season1DataCache.has(queue_id)) {
+      const cached = this.season1DataCache.get(queue_id)
+      if (cached) return cached
+    }
+
+    try {
+      // Path to the Season 1 snapshot file
+      const filePath = path.join(
+          process.cwd(),
+          'src',
+          'data',
+          'leaderboard-snapshot-eos1.json'
+      )
+
+      // Read and parse the file
+      const fileContent = fs.readFileSync(filePath, 'utf-8')
+      const data = JSON.parse(fileContent)
+
+      // Extract and format the leaderboard entries
+      const entries = data.alltime.map((entry: any) => ({
+        id: entry.id,
+        name: entry.name,
+        mmr: entry.data.mmr,
+        wins: entry.data.wins,
+        losses: entry.data.losses,
+        streak: entry.data.streak,
+        totalgames: entry.data.totalgames,
+        peak_mmr: entry.data.peak_mmr,
+        peak_streak: entry.data.peak_streak,
+        rank: entry.data.rank,
+        winrate: entry.data.winrate,
+      }))
+
+      // Cache the data for future requests
+      this.season1DataCache.set(queue_id, entries)
+
+      return entries
+    } catch (error) {
+      console.error('Error loading Season 2 data:', error)
+      return []
+    }
+  }
+
+  // Get Season 1 leaderboard data
+  async getSeason1Leaderboard(queue_id: string): Promise<LeaderboardEntry[]> {
+    const entries = this.loadSeason1Data(queue_id)
+
+    // Sort entries by MMR in descending order
+    const sortedEntries = [...entries].sort((a, b) => b.mmr - a.mmr)
+
+    // Recalculate ranks based on sorted order
+    return sortedEntries.map((entry, idx) => ({
+      ...entry,
+      rank: idx + 1,
+    }))
+  }
+
+  // Get Season 2 user rank data
+  async getSeason1UserRank(
+      queue_id: string,
+      user_id: string
+  ): Promise<LeaderboardEntry | null> {
+    // Get the sorted leaderboard with recalculated ranks
+    const sortedLeaderboard = await this.getSeason1Leaderboard(queue_id)
+
+    // Find the user entry in the sorted leaderboard
+    const userEntry = sortedLeaderboard.find((entry) => entry.id === user_id)
+    return userEntry || null
   }
 
   // Load Season 2 data from the snapshot file
