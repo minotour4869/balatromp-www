@@ -920,21 +920,14 @@ export default function LogParser() {
         }
       } // End of line processing loop
 
-if (currentGame) {
-  // Hi Andy, its Owen, I basically dont want logs to parse if the game is still ongoing, we've recentlly disallowed it and Ive been checking manually and its been a real pain
-  // This probably doesnt work because I wrote it but like fingers crossed?
-  if (!currentGame.endDate) {
-    throw new Error(
-      'This log is from a game that has not finished yet.'
-    )
-  }
+      if (currentGame) {
+        if (currentGame.endDate) {
+          currentGame.durationSeconds =
+            (currentGame.endDate.getTime() - currentGame.startDate.getTime()) / 1000
 
-  currentGame.durationSeconds =
-    (currentGame.endDate.getTime() - currentGame.startDate.getTime()) / 1000
-
-  games.push(currentGame)
-}
-
+          games.push(currentGame)
+        }
+      }
 
       if (games.length === 0) {
         setError('No games found in the log file.')
