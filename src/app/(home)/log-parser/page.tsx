@@ -921,22 +921,12 @@ export default function LogParser() {
       } // End of line processing loop
 
       if (currentGame) {
-        if (!currentGame.endDate) {
-          const lastEventTime =
-            currentGame.events.length > 0
-              ? currentGame.events[currentGame.events.length - 1]?.timestamp
-              : null
-          currentGame.endDate =
-            lastEventTime ?? lastProcessedTimestamp ?? currentGame.startDate // Fallback chain
+        if (currentGame.endDate) {
+          currentGame.durationSeconds =
+            (currentGame.endDate.getTime() - currentGame.startDate.getTime()) / 1000
+
+          games.push(currentGame)
         }
-        currentGame.durationSeconds = currentGame.endDate
-          ? ((currentGame.endDate instanceof Date
-              ? currentGame.endDate.getTime()
-              : new Date(currentGame.endDate).getTime()) -
-              currentGame.startDate.getTime()) /
-            1000
-          : null
-        games.push(currentGame)
       }
 
       if (games.length === 0) {
