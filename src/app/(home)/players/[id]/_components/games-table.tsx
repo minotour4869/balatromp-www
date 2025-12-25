@@ -86,6 +86,22 @@ const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
           )
         },
       }),
+      columnHelper.accessor('deck', {
+        header: 'Deck',
+        cell: (info) => (
+          <Badge variant='outline' className='font-normal capitalize'>
+            {info.getValue()?.replace('Deck', '').trim() || '-'}
+          </Badge>
+        ),
+      }),
+      columnHelper.accessor('stake', {
+        header: 'Stake',
+        cell: (info) => (
+          <Badge variant='outline' className='font-normal capitalize'>
+            {info.getValue()?.replace('Stake', '').trim() || '-'}
+          </Badge>
+        ),
+      }),
       columnHelper.accessor('opponentMmr', {
         header: 'Opponent MMR',
         meta: { className: 'justify-end' },
