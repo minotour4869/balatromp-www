@@ -65,6 +65,17 @@ const DECK_IMAGES: Record<string, string> = {
   anaglyph: '/decks/anaglyph.png',
   plasma: '/decks/plasma.png',
   erratic: '/decks/erratic.png',
+  challenge: '/decks/challenge.png',
+  heidelberg: '/decks/heidelberg.png',
+  gradient: '/decks/gradient.png',
+  white: '/decks/white.png',
+  violet: '/decks/violet.png',
+  sibyl: '/decks/sibyl.png',
+  orange: '/decks/orange.png',
+  oracle: '/decks/oracle.png',
+  indigo: '/decks/indigo.png',
+  cocktail: '/decks/cocktail.png',
+  unknown: '/decks/unknown.png',
 }
 
 const STAKE_IMAGES: Record<string, string> = {
@@ -76,16 +87,19 @@ const STAKE_IMAGES: Record<string, string> = {
   orange: '/stakes/orange_stake.png',
   black: '/stakes/black_stake.png',
   gold: '/stakes/gold_stake.png',
+  unknown: '/stakes/unknown.png',
 }
 
 const columnHelper = createColumnHelper<SelectGames>()
 
 const DeckDisplay = ({ deck }: { deck: string | null }) => {
-  if (!deck) return <span>-</span>
-  const cleanDeck = deck.replace('Deck', '').trim().toLowerCase()
+  const cleanDeck = deck
+    ? deck.replace('Deck', '').trim().toLowerCase()
+    : 'unknown'
   const imagePath = DECK_IMAGES[cleanDeck]
 
   if (!imagePath) {
+    if (!deck) return <span>-</span>
     return (
       <Badge variant='outline' className='font-normal capitalize'>
         {deck.replace('Deck', '').trim()}
@@ -99,7 +113,7 @@ const DeckDisplay = ({ deck }: { deck: string | null }) => {
         <div className='flex w-fit items-center justify-start'>
           <Image
             src={imagePath}
-            alt={deck}
+            alt={deck ?? 'Unknown Deck'}
             width={20}
             height={28}
             className='h-auto w-5'
@@ -107,18 +121,20 @@ const DeckDisplay = ({ deck }: { deck: string | null }) => {
         </div>
       </TooltipTrigger>
       <TooltipContent align='start' side='top' sideOffset={5}>
-        <p>{deck}</p>
+        <p>{deck ?? 'Unknown Deck'}</p>
       </TooltipContent>
     </Tooltip>
   )
 }
 
 const StakeDisplay = ({ stake }: { stake: string | null }) => {
-  if (!stake) return <span>-</span>
-  const cleanStake = stake.replace('Stake', '').trim().toLowerCase()
+  const cleanStake = stake
+    ? stake.replace('Stake', '').trim().toLowerCase()
+    : 'unknown'
   const imagePath = STAKE_IMAGES[cleanStake]
 
   if (!imagePath) {
+    if (!stake) return <span>-</span>
     return (
       <Badge variant='outline' className='font-normal capitalize'>
         {stake.replace('Stake', '').trim()}
@@ -132,7 +148,7 @@ const StakeDisplay = ({ stake }: { stake: string | null }) => {
         <div className='flex w-fit items-center justify-start'>
           <Image
             src={imagePath}
-            alt={stake}
+            alt={stake ?? 'Unknown Stake'}
             width={24}
             height={32}
             className='h-auto w-6'
@@ -140,7 +156,7 @@ const StakeDisplay = ({ stake }: { stake: string | null }) => {
         </div>
       </TooltipTrigger>
       <TooltipContent align='start' side='top' sideOffset={5}>
-        <p>{stake}</p>
+        <p>{stake ?? 'Unknown Stake'}</p>
       </TooltipContent>
     </Tooltip>
   )
