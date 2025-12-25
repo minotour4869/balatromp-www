@@ -16,6 +16,8 @@ import {
   DeckStakeStatsChart,
   DECK_IMAGES,
   STAKE_IMAGES,
+  DeckImage,
+  StakeImage,
 } from '@/app/(home)/players/[id]/_components/deck-stake-stats-chart'
 import { TimeZoneProvider } from '@/components/timezone-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -260,10 +262,10 @@ function UserInfoComponent() {
 
     const mostPlayedDeck = Object.entries(deckCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
     const mostPlayedStake = Object.entries(stakeCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
 
     return { deck: mostPlayedDeck, stake: mostPlayedStake }
   }, [games])
@@ -290,10 +292,10 @@ function UserInfoComponent() {
 
     const mostPlayedDeck = Object.entries(deckCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
     const mostPlayedStake = Object.entries(stakeCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
 
     return { deck: mostPlayedDeck, stake: mostPlayedStake }
   }, [games])
@@ -320,10 +322,10 @@ function UserInfoComponent() {
 
     const mostPlayedDeck = Object.entries(deckCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
     const mostPlayedStake = Object.entries(stakeCounts).sort(
       (a, b) => b[1] - a[1]
-    )[0]?.[0]
+    )[0]?.[0] ?? 'unknown'
 
     return { deck: mostPlayedDeck, stake: mostPlayedStake }
   }, [games])
@@ -645,30 +647,10 @@ function UserInfoComponent() {
                 customValue={
                   <div className='flex items-center gap-1.5'>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedRanked.deck
-                            ? DECK_IMAGES[mostPlayedRanked.deck] ?? DECK_IMAGES.unknown
-                            : DECK_IMAGES.unknown
-                        }
-                        alt={mostPlayedRanked.deck ?? 'unknown'}
-                        width={24}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <DeckImage deck={mostPlayedRanked.deck} />
                     </div>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedRanked.stake
-                            ? STAKE_IMAGES[mostPlayedRanked.stake] ?? STAKE_IMAGES.unknown
-                            : STAKE_IMAGES.unknown
-                        }
-                        alt={mostPlayedRanked.stake ?? 'unknown'}
-                        width={32}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <StakeImage stake={mostPlayedRanked.stake} />
                     </div>
                   </div>
                 }
@@ -685,30 +667,10 @@ function UserInfoComponent() {
                 customValue={
                   <div className='flex items-center gap-1.5'>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedVanilla.deck
-                            ? DECK_IMAGES[mostPlayedVanilla.deck] ?? DECK_IMAGES.unknown
-                            : DECK_IMAGES.unknown
-                        }
-                        alt={mostPlayedVanilla.deck ?? 'unknown'}
-                        width={24}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <DeckImage deck={mostPlayedVanilla.deck} />
                     </div>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedVanilla.stake
-                            ? STAKE_IMAGES[mostPlayedVanilla.stake] ?? STAKE_IMAGES.unknown
-                            : STAKE_IMAGES.unknown
-                        }
-                        alt={mostPlayedVanilla.stake ?? 'unknown'}
-                        width={32}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <StakeImage stake={mostPlayedVanilla.stake} />
                     </div>
                   </div>
                 }
@@ -725,30 +687,10 @@ function UserInfoComponent() {
                 customValue={
                   <div className='flex items-center gap-1.5'>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedSmallworld.deck
-                            ? DECK_IMAGES[mostPlayedSmallworld.deck] ?? DECK_IMAGES.unknown
-                            : DECK_IMAGES.unknown
-                        }
-                        alt={mostPlayedSmallworld.deck ?? 'unknown'}
-                        width={24}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <DeckImage deck={mostPlayedSmallworld.deck} />
                     </div>
                     <div className='flex items-center gap-1'>
-                      <Image
-                        src={
-                          mostPlayedSmallworld.stake
-                            ? STAKE_IMAGES[mostPlayedSmallworld.stake] ?? STAKE_IMAGES.unknown
-                            : STAKE_IMAGES.unknown
-                        }
-                        alt={mostPlayedSmallworld.stake ?? 'unknown'}
-                        width={32}
-                        height={32}
-                        className='h-8 w-auto'
-                      />
+                      <StakeImage stake={mostPlayedSmallworld.stake} />
                     </div>
                   </div>
                 }
