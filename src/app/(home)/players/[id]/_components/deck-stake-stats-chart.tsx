@@ -63,6 +63,52 @@ export const STAKE_IMAGES: Record<string, string> = {
   unknown: '/stakes/unknown.png',
 }
 
+export function DeckImage({
+  deck,
+  width = 24,
+  height = 32,
+  className = 'h-8 w-auto',
+}: {
+  deck: string | null | undefined
+  width?: number
+  height?: number
+  className?: string
+}) {
+  const src = (deck ? DECK_IMAGES[deck] : null) ?? DECK_IMAGES.unknown ?? ''
+  return (
+    <Image
+      src={src}
+      alt={deck ?? 'unknown'}
+      width={width}
+      height={height}
+      className={className}
+    />
+  )
+}
+
+export function StakeImage({
+  stake,
+  width = 32,
+  height = 32,
+  className = 'h-8 w-auto',
+}: {
+  stake: string | null | undefined
+  width?: number
+  height?: number
+  className?: string
+}) {
+  const src = (stake ? STAKE_IMAGES[stake] : null) ?? STAKE_IMAGES.unknown ?? ''
+  return (
+    <Image
+      src={src}
+      alt={stake ?? 'unknown'}
+      width={width}
+      height={height}
+      className={className}
+    />
+  )
+}
+
 const deckChartConfig = {
   count: {
     label: 'Games',
