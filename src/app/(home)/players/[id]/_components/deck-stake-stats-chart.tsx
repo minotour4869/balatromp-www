@@ -177,28 +177,34 @@ export function DeckStakeStatsChart({
                   dataKey="name"
                   tickLine={false}
                   axisLine={false}
+                  interval={0}
                   tick={(props) => {
                     const { x, y, payload } = props
                     const imagePath = DECK_IMAGES[payload.value]
+                    const itemCount = deckData.length
+                    const imgSize = Math.max(20, Math.min(40, 600 / itemCount))
                     return (
-                      <g transform={`translate(${x - 20},${y + 10})`}>
+                      <g transform={`translate(${x - imgSize / 2},${y + 10})`}>
+                        <title className="capitalize">{payload.value}</title>
                         {imagePath && (
                           <image
                             href={imagePath}
-                            width="40"
-                            height="40"
+                            width={imgSize}
+                            height={imgSize}
                           />
                         )}
-                        <text
-                          x="20"
-                          y="60"
-                          textAnchor="middle"
-                          fill="currentColor"
-                          fontSize="12"
-                          className="capitalize font-medium"
-                        >
-                          {payload.value}
-                        </text>
+                        {itemCount <= 12 && (
+                          <text
+                            x={imgSize / 2}
+                            y={imgSize + 20}
+                            textAnchor="middle"
+                            fill="currentColor"
+                            fontSize="10"
+                            className="capitalize font-medium"
+                          >
+                            {payload.value}
+                          </text>
+                        )}
                       </g>
                     )
                   }}
@@ -206,7 +212,7 @@ export function DeckStakeStatsChart({
                 <YAxis hide />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="count" fill="var(--color-violet-500)" radius={4}>
                   <LabelList
@@ -214,7 +220,7 @@ export function DeckStakeStatsChart({
                     position="top"
                     offset={8}
                     className="fill-foreground"
-                    fontSize={12}
+                    fontSize={10}
                   />
                 </Bar>
               </BarChart>
@@ -244,28 +250,34 @@ export function DeckStakeStatsChart({
                   dataKey="name"
                   tickLine={false}
                   axisLine={false}
+                  interval={0}
                   tick={(props) => {
                     const { x, y, payload } = props
                     const imagePath = STAKE_IMAGES[payload.value]
+                    const itemCount = stakeData.length
+                    const imgSize = Math.max(20, Math.min(40, 600 / itemCount))
                     return (
-                      <g transform={`translate(${x - 20},${y + 10})`}>
+                      <g transform={`translate(${x - imgSize / 2},${y + 10})`}>
+                        <title className="capitalize">{payload.value}</title>
                         {imagePath && (
                           <image
                             href={imagePath}
-                            width="40"
-                            height="40"
+                            width={imgSize}
+                            height={imgSize}
                           />
                         )}
-                        <text
-                          x="20"
-                          y="60"
-                          textAnchor="middle"
-                          fill="currentColor"
-                          fontSize="12"
-                          className="capitalize font-medium"
-                        >
-                          {payload.value}
-                        </text>
+                        {itemCount <= 12 && (
+                          <text
+                            x={imgSize / 2}
+                            y={imgSize + 20}
+                            textAnchor="middle"
+                            fill="currentColor"
+                            fontSize="10"
+                            className="capitalize font-medium"
+                          >
+                            {payload.value}
+                          </text>
+                        )}
                       </g>
                     )
                   }}
@@ -273,7 +285,7 @@ export function DeckStakeStatsChart({
                 <YAxis hide />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="count" fill="var(--color-emerald-500)" radius={4}>
                   <LabelList
@@ -281,7 +293,7 @@ export function DeckStakeStatsChart({
                     position="top"
                     offset={8}
                     className="fill-foreground"
-                    fontSize={12}
+                    fontSize={10}
                   />
                 </Bar>
               </BarChart>
