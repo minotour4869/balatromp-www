@@ -1,0 +1,252 @@
+'use client'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
+import type { SelectGames } from '@/server/db/types'
+import {
+  type Season,
+  filterGamesBySeason,
+  getSeasonDisplayName,
+} from '@/shared/seasons'
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from 'recharts'
+import { useMemo } from 'react'
+import Image from 'next/image'
+
+export const DECK_IMAGES: Record<string, string> = {
+  red: '/decks/red.png',
+  blue: '/decks/blue.png',
+  yellow: '/decks/yellow.png',
+  green: '/decks/green.png',
+  black: '/decks/black.png',
+  magic: '/decks/magic.png',
+  nebula: '/decks/nebula.png',
+  ghost: '/decks/ghost.png',
+  abandoned: '/decks/abandoned.png',
+  checkered: '/decks/checkered.png',
+  zodiac: '/decks/zodiac.png',
+  painted: '/decks/painted.png',
+  anaglyph: '/decks/anaglyph.png',
+  plasma: '/decks/plasma.png',
+  erratic: '/decks/erratic.png',
+  challenge: '/decks/challenge.png',
+  heidelberg: '/decks/heidelberg.png',
+  gradient: '/decks/gradient.png',
+  white: '/decks/white.png',
+  violet: '/decks/violet.png',
+  sibyl: '/decks/sibyl.png',
+  orange: '/decks/orange.png',
+  oracle: '/decks/oracle.png',
+  indigo: '/decks/indigo.png',
+  cocktail: '/decks/cocktail.png',
+  unknown: '/decks/unknown.png',
+}
+
+export const STAKE_IMAGES: Record<string, string> = {
+  white: '/stakes/white_stake.png',
+  red: '/stakes/red_stake.png',
+  green: '/stakes/green_stake.png',
+  blue: '/stakes/blue_stake.png',
+  purple: '/stakes/purple_stake.png',
+  orange: '/stakes/orange_stake.png',
+  black: '/stakes/black_stake.png',
+  gold: '/stakes/gold_stake.png',
+  unknown: '/stakes/unknown.png',
+}
+
+const deckChartConfig = {
+  count: {
+    label: 'Games',
+    color: 'var(--color-violet-500)',
+  },
+} satisfies ChartConfig
+
+const stakeChartConfig = {
+  count: {
+    label: 'Games',
+    color: 'var(--color-emerald-500)',
+  },
+} satisfies ChartConfig
+
+export function DeckStakeStatsChart({
+  games,
+  season = 'season5',
+}: {
+  games: SelectGames[]
+  season?: Season
+}) {
+  const deckData = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const game of games) {
+      const cleanDeck = game.deck
+        ? game.deck.replace('Deck', '').trim().toLowerCase()
+        : 'unknown'
+      if (cleanDeck === 'unknown') continue
+      counts[cleanDeck] = (counts[cleanDeck] ?? 0) + 1
+    }
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [games])
+
+  const stakeData = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const game of games) {
+      const cleanStake = game.stake
+        ? game.stake.replace('Stake', '').trim().toLowerCase()
+        : 'unknown'
+      if (cleanStake === 'unknown') continue
+      counts[cleanStake] = (counts[cleanStake] ?? 0) + 1
+    }
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [games])
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Decks Played</CardTitle>
+          <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-2">
+          {deckData.length > 0 ? (
+            <ChartContainer config={deckChartConfig} className="h-[350px] w-full">
+              <BarChart
+                data={deckData}
+                margin={{ top: 20, right: 20, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={(props) => {
+                    const { x, y, payload } = props
+                    const imagePath = DECK_IMAGES[payload.value]
+                    return (
+                      <g transform={`translate(${x - 20},${y + 10})`}>
+                        {imagePath && (
+                          <image
+                            href={imagePath}
+                            width="40"
+                            height="40"
+                          />
+                        )}
+                        <text
+                          x="20"
+                          y="60"
+                          textAnchor="middle"
+                          fill="currentColor"
+                          fontSize="12"
+                          className="capitalize font-medium"
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    )
+                  }}
+                />
+                <YAxis hide />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="count" fill="var(--color-violet-500)" radius={4}>
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    offset={8}
+                    className="fill-foreground"
+                    fontSize={12}
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <div className="flex h-[350px] w-full items-center justify-center text-muted-foreground">
+              No deck data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stakes Played</CardTitle>
+          <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-2">
+          {stakeData.length > 0 ? (
+            <ChartContainer config={stakeChartConfig} className="h-[350px] w-full">
+              <BarChart
+                data={stakeData}
+                margin={{ top: 20, right: 20, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={(props) => {
+                    const { x, y, payload } = props
+                    const imagePath = STAKE_IMAGES[payload.value]
+                    return (
+                      <g transform={`translate(${x - 20},${y + 10})`}>
+                        {imagePath && (
+                          <image
+                            href={imagePath}
+                            width="40"
+                            height="40"
+                          />
+                        )}
+                        <text
+                          x="20"
+                          y="60"
+                          textAnchor="middle"
+                          fill="currentColor"
+                          fontSize="12"
+                          className="capitalize font-medium"
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    )
+                  }}
+                />
+                <YAxis hide />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="count" fill="var(--color-emerald-500)" radius={4}>
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    offset={8}
+                    className="fill-foreground"
+                    fontSize={12}
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <div className="flex h-[350px] w-full items-center justify-center text-muted-foreground">
+              No stake data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

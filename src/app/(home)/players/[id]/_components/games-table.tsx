@@ -16,6 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { SelectGames } from '@/server/db/types'
 import { api } from '@/trpc/react'
@@ -35,6 +41,7 @@ import {
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useFormatter, useTimeZone } from 'next-intl'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
@@ -42,7 +49,119 @@ const numberFormatter = new Intl.NumberFormat('en-US', {
   signDisplay: 'exceptZero',
 })
 
+const DECK_IMAGES: Record<string, string> = {
+  red: '/decks/red.png',
+  blue: '/decks/blue.png',
+  yellow: '/decks/yellow.png',
+  green: '/decks/green.png',
+  black: '/decks/black.png',
+  magic: '/decks/magic.png',
+  nebula: '/decks/nebula.png',
+  ghost: '/decks/ghost.png',
+  abandoned: '/decks/abandoned.png',
+  checkered: '/decks/checkered.png',
+  zodiac: '/decks/zodiac.png',
+  painted: '/decks/painted.png',
+  anaglyph: '/decks/anaglyph.png',
+  plasma: '/decks/plasma.png',
+  erratic: '/decks/erratic.png',
+  challenge: '/decks/challenge.png',
+  heidelberg: '/decks/heidelberg.png',
+  gradient: '/decks/gradient.png',
+  white: '/decks/white.png',
+  violet: '/decks/violet.png',
+  sibyl: '/decks/sibyl.png',
+  orange: '/decks/orange.png',
+  oracle: '/decks/oracle.png',
+  indigo: '/decks/indigo.png',
+  cocktail: '/decks/cocktail.png',
+  unknown: '/decks/unknown.png',
+}
+
+const STAKE_IMAGES: Record<string, string> = {
+  white: '/stakes/white_stake.png',
+  red: '/stakes/red_stake.png',
+  green: '/stakes/green_stake.png',
+  blue: '/stakes/blue_stake.png',
+  purple: '/stakes/purple_stake.png',
+  orange: '/stakes/orange_stake.png',
+  black: '/stakes/black_stake.png',
+  gold: '/stakes/gold_stake.png',
+  unknown: '/stakes/unknown.png',
+}
+
 const columnHelper = createColumnHelper<SelectGames>()
+
+const DeckDisplay = ({ deck }: { deck: string | null }) => {
+  const cleanDeck = deck
+    ? deck.replace('Deck', '').trim().toLowerCase()
+    : 'unknown'
+  const imagePath = DECK_IMAGES[cleanDeck]
+
+  if (!imagePath) {
+    if (!deck) return <span>-</span>
+    return (
+      <Badge variant='outline' className='font-normal capitalize'>
+        {deck.replace('Deck', '').trim()}
+      </Badge>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className='flex w-fit items-center justify-start'>
+          <Image
+            src={imagePath}
+            alt={deck ?? 'Unknown Deck'}
+            width={20}
+            height={28}
+            className='h-auto w-5'
+          />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent align='start' side='top' sideOffset={5}>
+        <p>{deck ?? 'Unknown Deck'}</p>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+const StakeDisplay = ({ stake }: { stake: string | null }) => {
+  const cleanStake = stake
+    ? stake.replace('Stake', '').trim().toLowerCase()
+    : 'unknown'
+  const imagePath = STAKE_IMAGES[cleanStake]
+
+  if (!imagePath) {
+    if (!stake) return <span>-</span>
+    return (
+      <Badge variant='outline' className='font-normal capitalize'>
+        {stake.replace('Stake', '').trim()}
+      </Badge>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className='flex w-fit items-center justify-start'>
+          <Image
+            src={imagePath}
+            alt={stake ?? 'Unknown Stake'}
+            width={24}
+            height={32}
+            className='h-auto w-6'
+          />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent align='start' side='top' sideOffset={5}>
+        <p>{stake ?? 'Unknown Stake'}</p>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 // This function is now moved inside the GamesTable component
 const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
   const format = useFormatter()
@@ -85,6 +204,14 @@ const useColumns = (openTranscriptFn?: (gameNumber: number) => void) => {
             </Badge>
           )
         },
+      }),
+      columnHelper.accessor('deck', {
+        header: 'Deck',
+        cell: (info) => <DeckDisplay deck={info.getValue()} />,
+      }),
+      columnHelper.accessor('stake', {
+        header: 'Stake',
+        cell: (info) => <StakeDisplay stake={info.getValue()} />,
       }),
       columnHelper.accessor('opponentMmr', {
         header: 'Opponent MMR',
@@ -233,7 +360,7 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
   })
 
   return (
-    <>
+    <TooltipProvider>
       <div className='rounded-md border'>
         <Table>
           <TableHeader>
@@ -345,6 +472,6 @@ export function GamesTable({ games }: { games: SelectGames[] }) {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </TooltipProvider>
   )
 }

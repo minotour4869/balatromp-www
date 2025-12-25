@@ -6,13 +6,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/mobile-tooltip'
-import type React from 'react'
-import { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 import { GamesTable } from '@/app/(home)/players/[id]/_components/games-table'
 import { MmrTrendChart } from '@/app/(home)/players/[id]/_components/mmr-trend-chart'
 import { OpponentsTable } from '@/app/(home)/players/[id]/_components/opponents-table'
 import { WinrateTrendChart } from '@/app/(home)/players/[id]/_components/winrate-trend-chart'
+import {
+  DeckStakeStatsChart,
+  DECK_IMAGES,
+  STAKE_IMAGES,
+} from '@/app/(home)/players/[id]/_components/deck-stake-stats-chart'
 import { TimeZoneProvider } from '@/components/timezone-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -55,8 +59,9 @@ import {
   Youtube,
 } from 'lucide-react'
 import { useFormatter, useTimeZone } from 'next-intl'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { isNonNullish } from 'remeda'
+import {capitalize, isNonNullish} from 'remeda'
 
 const numberFormatter = new Intl.NumberFormat('en-US', {
   signDisplay: 'exceptZero',
@@ -232,6 +237,97 @@ function UserInfoComponent() {
       ? rankedMeaningfulGames.reduce((acc, g) => acc + g.opponentMmr, 0) /
         rankedMeaningfulGames.length
       : 0
+
+  const mostPlayedRanked = useMemo(() => {
+    const rankedGames = games.filter((g) => g.gameType === 'ranked')
+    const deckCounts: Record<string, number> = {}
+    const stakeCounts: Record<string, number> = {}
+
+    for (const g of rankedGames) {
+      if (g.deck) {
+        const clean = g.deck.replace('Deck', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          deckCounts[clean] = (deckCounts[clean] ?? 0) + 1
+        }
+      }
+      if (g.stake) {
+        const clean = g.stake.replace('Stake', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          stakeCounts[clean] = (stakeCounts[clean] ?? 0) + 1
+        }
+      }
+    }
+
+    const mostPlayedDeck = Object.entries(deckCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+    const mostPlayedStake = Object.entries(stakeCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+
+    return { deck: mostPlayedDeck, stake: mostPlayedStake }
+  }, [games])
+
+  const mostPlayedSmallworld = useMemo(() => {
+    const swGames = games.filter((g) => g.gameType.toLowerCase() === 'smallworld')
+    const deckCounts: Record<string, number> = {}
+    const stakeCounts: Record<string, number> = {}
+
+    for (const g of swGames) {
+      if (g.deck) {
+        const clean = g.deck.replace('Deck', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          deckCounts[clean] = (deckCounts[clean] ?? 0) + 1
+        }
+      }
+      if (g.stake) {
+        const clean = g.stake.replace('Stake', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          stakeCounts[clean] = (stakeCounts[clean] ?? 0) + 1
+        }
+      }
+    }
+
+    const mostPlayedDeck = Object.entries(deckCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+    const mostPlayedStake = Object.entries(stakeCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+
+    return { deck: mostPlayedDeck, stake: mostPlayedStake }
+  }, [games])
+
+  const mostPlayedVanilla = useMemo(() => {
+    const vanillaGames = games.filter((g) => g.gameType.toLowerCase() === 'vanilla')
+    const deckCounts: Record<string, number> = {}
+    const stakeCounts: Record<string, number> = {}
+
+    for (const g of vanillaGames) {
+      if (g.deck) {
+        const clean = g.deck.replace('Deck', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          deckCounts[clean] = (deckCounts[clean] ?? 0) + 1
+        }
+      }
+      if (g.stake) {
+        const clean = g.stake.replace('Stake', '').trim().toLowerCase()
+        if (clean !== 'unknown') {
+          stakeCounts[clean] = (stakeCounts[clean] ?? 0) + 1
+        }
+      }
+    }
+
+    const mostPlayedDeck = Object.entries(deckCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+    const mostPlayedStake = Object.entries(stakeCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0]
+
+    return { deck: mostPlayedDeck, stake: mostPlayedStake }
+  }, [games])
+
   return (
     <div className='flex flex-1 flex-col overflow-hidden'>
       <div className='mx-auto flex w-[calc(100%-1rem)] max-w-fd-container flex-1 flex-col'>
@@ -370,11 +466,7 @@ function UserInfoComponent() {
             <div
               className={cn(
                 'grid w-full flex-grow grid-cols-2 divide-gray-100 md:w-auto md:grid-cols-3 md:divide-y-0 dark:divide-zinc-800',
-                isNonNullish(rankedUserRank?.mmr) && 'lg:grid-cols-5',
-                isNonNullish(vanillaUserRank?.mmr) && 'lg:grid-cols-5',
-                isNonNullish(rankedUserRank?.mmr) &&
-                  isNonNullish(vanillaUserRank?.mmr) &&
-                  'lg:grid-cols-6'
+                'lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
               )}
             >
               <StatsCard
@@ -398,7 +490,8 @@ function UserInfoComponent() {
                 accentColor='text-rose-500'
               />
 
-              {isNonNullish(rankedUserRank?.mmr) && (
+              {isNonNullish(rankedUserRank?.mmr) &&
+                !Number.isNaN(rankedUserRank?.mmr) ? (
                 <StatsCard
                   title='Ranked MMR'
                   value={Math.round(rankedUserRank.mmr)}
@@ -435,9 +528,20 @@ function UserInfoComponent() {
                   }
                   accentColor='text-zink-800 dark:text-zink-200'
                 />
+              ) : (
+                <StatsCard
+                  title='Ranked MMR'
+                  value={0}
+                  customValue='N/A'
+                  icon={
+                    <ShieldHalf className='h-5 w-5 text-zink-800 dark:text-zink-200' />
+                  }
+                  accentColor='text-zink-800 dark:text-zink-200'
+                  description='No data'
+                />
               )}
               {isNonNullish(vanillaUserRank?.mmr) &&
-                !Number.isNaN(vanillaUserRank?.mmr) && (
+                !Number.isNaN(vanillaUserRank?.mmr) ? (
                   <StatsCard
                     title='Vanilla MMR'
                     value={Math.round(vanillaUserRank.mmr)}
@@ -474,9 +578,19 @@ function UserInfoComponent() {
                       ) : null
                     }
                   />
+                ) : (
+                  <StatsCard
+                    title='Vanilla MMR'
+                    value={200}
+                    icon={
+                      <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
+                    }
+                    accentColor='text-zink-800 dark:text-zink-200'
+                    description='Default MMR'
+                  />
                 )}
               {isNonNullish(smallWorldUserRank?.mmr) &&
-                !Number.isNaN(smallWorldUserRank?.mmr) && (
+                !Number.isNaN(smallWorldUserRank?.mmr) ? (
                   <StatsCard
                     title='Smallworld MMR'
                     value={Math.round(smallWorldUserRank.mmr)}
@@ -513,7 +627,138 @@ function UserInfoComponent() {
                       ) : null
                     }
                   />
+                ) : (
+                  <StatsCard
+                    title='Smallworld MMR'
+                    value={0}
+                    customValue='N/A'
+                    icon={
+                      <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
+                    }
+                    accentColor='text-zink-800 dark:text-zink-200'
+                    description='No data'
+                  />
                 )}
+              <StatsCard
+                title='Top Ranked'
+                value={0}
+                customValue={
+                  <div className='flex items-center gap-1.5'>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedRanked.deck
+                            ? DECK_IMAGES[mostPlayedRanked.deck] ?? DECK_IMAGES.unknown
+                            : DECK_IMAGES.unknown
+                        }
+                        alt={mostPlayedRanked.deck ?? 'unknown'}
+                        width={24}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedRanked.stake
+                            ? STAKE_IMAGES[mostPlayedRanked.stake] ?? STAKE_IMAGES.unknown
+                            : STAKE_IMAGES.unknown
+                        }
+                        alt={mostPlayedRanked.stake ?? 'unknown'}
+                        width={32}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                  </div>
+                }
+                icon={<Trophy className='h-5 w-5' />}
+                description={
+                  !mostPlayedRanked.deck && !mostPlayedRanked.stake
+                    ? 'No Data'
+                    : `${capitalize(mostPlayedRanked.deck ?? 'Unknown')} / ${capitalize(mostPlayedRanked.stake ?? 'Unknown')}`
+                }
+              />
+              <StatsCard
+                title='Top Vanilla'
+                value={0}
+                customValue={
+                  <div className='flex items-center gap-1.5'>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedVanilla.deck
+                            ? DECK_IMAGES[mostPlayedVanilla.deck] ?? DECK_IMAGES.unknown
+                            : DECK_IMAGES.unknown
+                        }
+                        alt={mostPlayedVanilla.deck ?? 'unknown'}
+                        width={24}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedVanilla.stake
+                            ? STAKE_IMAGES[mostPlayedVanilla.stake] ?? STAKE_IMAGES.unknown
+                            : STAKE_IMAGES.unknown
+                        }
+                        alt={mostPlayedVanilla.stake ?? 'unknown'}
+                        width={32}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                  </div>
+                }
+                icon={<IceCreamCone className='h-5 w-5' />}
+                description={
+                  !mostPlayedVanilla.deck && !mostPlayedVanilla.stake
+                    ? 'No Data'
+                    : `${capitalize(mostPlayedVanilla.deck ?? 'Unknown')} / ${capitalize(mostPlayedVanilla.stake ?? 'Unknown')}`
+                }
+              />
+              <StatsCard
+                title='Top Smallworld'
+                value={0}
+                customValue={
+                  <div className='flex items-center gap-1.5'>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedSmallworld.deck
+                            ? DECK_IMAGES[mostPlayedSmallworld.deck] ?? DECK_IMAGES.unknown
+                            : DECK_IMAGES.unknown
+                        }
+                        alt={mostPlayedSmallworld.deck ?? 'unknown'}
+                        width={24}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                    <div className='flex items-center gap-1'>
+                      <Image
+                        src={
+                          mostPlayedSmallworld.stake
+                            ? STAKE_IMAGES[mostPlayedSmallworld.stake] ?? STAKE_IMAGES.unknown
+                            : STAKE_IMAGES.unknown
+                        }
+                        alt={mostPlayedSmallworld.stake ?? 'unknown'}
+                        width={32}
+                        height={32}
+                        className='h-8 w-auto'
+                      />
+                    </div>
+                  </div>
+                }
+                icon={<GlobeIcon className='h-5 w-5' />}
+                description={
+                  !mostPlayedSmallworld.deck && !mostPlayedSmallworld.stake
+                    ? 'No Data'
+                    : `${capitalize(mostPlayedSmallworld.deck ?? 'Unknown')} / ${capitalize(mostPlayedSmallworld.stake ?? 'Unknown')}`
+                }
+              />
               <StatsCard
                 title='Avg Opponent MMR'
                 value={Math.round(avgOpponentMmr)}
@@ -530,6 +775,7 @@ function UserInfoComponent() {
             <TabsList className='bg-gray-100 dark:bg-zinc-800'>
               <TabsTrigger value='matches'>Match History</TabsTrigger>
               <TabsTrigger value='opponents'>Opponents</TabsTrigger>
+              <TabsTrigger value='deck-stake-stats'>Decks/Stakes</TabsTrigger>
               <TabsTrigger value='mmr-trends'>MMR Trends</TabsTrigger>
               <TabsTrigger value='winrate-trends'>Winrate Trends</TabsTrigger>
               <TabsTrigger value='stats'>Statistics</TabsTrigger>
@@ -620,6 +866,9 @@ function UserInfoComponent() {
               </div>
             </div>
           </TabsContent>
+          <TabsContent value='deck-stake-stats' className='m-0'>
+            <DeckStakeStatsChart games={filteredGames} season={season} />
+          </TabsContent>
           <TabsContent value='stats' className='m-0'>
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               {(rankedLeaderboard || lastRankedGame) && (
@@ -683,6 +932,7 @@ function UserInfoComponent() {
 interface StatsCardProps {
   title: string
   value: number
+  customValue?: React.ReactNode
   icon: React.ReactNode
   description: React.ReactNode
   accentColor?: string
@@ -691,6 +941,7 @@ interface StatsCardProps {
 function StatsCard({
   title,
   value,
+  customValue,
   icon,
   description,
   accentColor = 'text-violet-500',
@@ -702,7 +953,11 @@ function StatsCard({
       </h3>
       <div className={'flex items-center gap-2'}>
         <div className='flex items-center justify-center'>{icon}</div>
-        <p className={cn('font-bold text-3xl', accentColor)}>{value}</p>
+        {customValue ? (
+          <div className={cn('font-bold text-3xl', accentColor)}>{customValue}</div>
+        ) : (
+          <p className={cn('font-bold text-3xl', accentColor)}>{value}</p>
+        )}
       </div>
       <p className='mt-1 text-gray-500 text-xs dark:text-zinc-400'>
         {description}

@@ -42,6 +42,8 @@ export const player_games = pgTable(
     opponentId: text('opponent_id').notNull(),
     opponentName: text('opponent_name').notNull(),
     opponentMmr: real('opponent_mmr').notNull(),
+    deck: text('deck'),
+    stake: text('stake'),
     result: text('result').notNull(),
     season: text('season'),
   },

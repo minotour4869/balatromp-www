@@ -171,6 +171,8 @@ function normalizeBotlatroMatchHistory(matches: PlayerMatch[]): SelectGames[] {
       opponentId: match.opponents[0]!.user_id,
       opponentName: match.opponents[0]!.name,
       opponentMmr: match.opponents[0]!.mmr_after,
+      deck: match.deck,
+      stake: match.stake,
       result: match.won ? 'win' : 'loss',
       season: 'season5',
     }))
