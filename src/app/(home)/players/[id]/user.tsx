@@ -43,6 +43,7 @@ import {
   getSeasonDisplayName,
 } from '@/shared/seasons'
 import { api } from '@/trpc/react'
+import { getRankData } from '@/shared/ranks'
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -109,6 +110,12 @@ function UserInfoComponent() {
     }
   )
 
+  const [smallworldLeaderboard] =
+    api.leaderboard.get_leaderboard.useSuspenseQuery({
+      channel_id: SMALLWORLD_QUEUE_ID,
+      season,
+    })
+
   // Fetch current season user rank
   const [vanillaUserRankQ] = api.leaderboard.get_user_rank.useSuspenseQuery({
     channel_id: VANILLA_QUEUE_ID,
@@ -124,6 +131,13 @@ function UserInfoComponent() {
     channel_id: RANKED_QUEUE_ID,
     user_id: id,
     season,
+  })
+
+  // Fetch Season 4 data for historic comparison
+  const [rankedUserRankS4Q] = api.leaderboard.get_user_rank.useSuspenseQuery({
+    channel_id: RANKED_QUEUE_ID,
+    user_id: id,
+    season: 'season4',
   })
 
   // Fetch Season 2 data for historic comparison
@@ -146,14 +160,15 @@ function UserInfoComponent() {
   // Extract historic data
   const rankedUserRankS2 = rankedUserRankS2Q?.data
   const rankedUserRankS3 = rankedUserRankS3Q?.data
+  const rankedUserRankS4 = rankedUserRankS4Q?.data
 
   // Determine which historic data to show (opposite of current season)
   const historicRankedData =
     season === 'season2'
-      ? rankedUserRankS3
+      ? { data: rankedUserRankS3, season: 'season3' as Season }
       : season === 'season3'
-        ? rankedUserRankS2
-        : rankedUserRankS3
+        ? { data: rankedUserRankS2, season: 'season2' as Season }
+        : { data: rankedUserRankS4, season: 'season4' as Season }
   // Filter games by season
   const seasonFilteredGames = filterGamesBySeason(games, season)
 
@@ -399,24 +414,6 @@ function UserInfoComponent() {
                   </Badge>
                 )}
 
-                {/* Show historic rank data if available */}
-                {historicRankedData && (
-                  <Badge
-                    variant='outline'
-                    className='border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                  >
-                    <Calendar className='mr-1 h-3 w-3' />
-                    <span>
-                      {getSeasonDisplayName(season)} Rank:{' '}
-                      {isNonNullish(historicRankedData.rank)
-                        ? `#${historicRankedData.rank}`
-                        : 'N/A'}
-                      {isNonNullish(historicRankedData.mmr)
-                        ? ` (${Math.round(historicRankedData.mmr)} MMR)`
-                        : ''}
-                    </span>
-                  </Badge>
-                )}
                 {!!vanillaLeaderboard && (
                   <Badge
                     variant='outline'
@@ -428,6 +425,39 @@ function UserInfoComponent() {
                       {isNonNullish(vanillaUserRank?.rank)
                         ? `#${vanillaUserRank.rank}`
                         : 'N/A'}
+                    </span>
+                  </Badge>
+                )}
+                {!!smallworldLeaderboard && (
+                  <Badge
+                    variant='outline'
+                    className='border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800'
+                  >
+                    <Trophy className='mr-1 h-3 w-3 text-violet-500' />
+                    <span className='text-gray-700 dark:text-zinc-300'>
+                      Smallworld Queue:{' '}
+                      {isNonNullish(smallWorldUserRank?.rank)
+                        ? `#${smallWorldUserRank.rank}`
+                        : 'N/A'}
+                    </span>
+                  </Badge>
+                )}
+
+                {/* Show historic rank data if available */}
+                {historicRankedData?.data && (
+                  <Badge
+                    variant='outline'
+                    className='border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  >
+                    <Calendar className='mr-1 h-3 w-3' />
+                    <span>
+                      {getSeasonDisplayName(historicRankedData.season)} Rank:{' '}
+                      {isNonNullish(historicRankedData.data.rank)
+                        ? `#${historicRankedData.data.rank}`
+                        : 'N/A'}
+                      {isNonNullish(historicRankedData.data.mmr)
+                        ? ` (${Math.round(historicRankedData.data.mmr)} MMR)`
+                        : ''}
                     </span>
                   </Badge>
                 )}
@@ -526,7 +556,30 @@ function UserInfoComponent() {
                     ) : null
                   }
                   icon={
-                    <ShieldHalf className='h-5 w-5 text-zink-800 dark:text-zink-200' />
+                    (() => {
+                      const rankData = getRankData(rankedUserRank.mmr, 'ranked')
+                      if (rankData) {
+                        return (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <img
+                                  src={rankData.enhancement}
+                                  alt={rankData.tooltip}
+                                  className='h-5'
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{rankData.tooltip}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )
+                      }
+                      return (
+                        <ShieldHalf className='h-5 w-5 text-zink-800 dark:text-zink-200' />
+                      )
+                    })()
                   }
                   accentColor='text-zink-800 dark:text-zink-200'
                 />
@@ -583,12 +636,13 @@ function UserInfoComponent() {
                 ) : (
                   <StatsCard
                     title='Vanilla MMR'
-                    value={200}
+                    value={0}
+                    customValue='N/A'
                     icon={
                       <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
                     }
                     accentColor='text-zink-800 dark:text-zink-200'
-                    description='Default MMR'
+                    description='No data'
                   />
                 )}
               {isNonNullish(smallWorldUserRank?.mmr) &&
@@ -597,7 +651,33 @@ function UserInfoComponent() {
                     title='Smallworld MMR'
                     value={Math.round(smallWorldUserRank.mmr)}
                     icon={
-                      <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
+                      (() => {
+                        const rankData = getRankData(
+                          smallWorldUserRank.mmr,
+                          'smallworld'
+                        )
+                        if (rankData) {
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <img
+                                    src={rankData.enhancement}
+                                    alt={rankData.tooltip}
+                                    className='h-5'
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{rankData.tooltip}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
+                        }
+                        return (
+                          <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
+                        )
+                      })()
                     }
                     accentColor='text-zink-800 dark:text-zink-200'
                     description={
@@ -720,8 +800,6 @@ function UserInfoComponent() {
               <TabsTrigger value='deck-stake-stats'>Decks/Stakes</TabsTrigger>
               <TabsTrigger value='mmr-trends'>MMR Trends</TabsTrigger>
               <TabsTrigger value='winrate-trends'>Winrate Trends</TabsTrigger>
-              <TabsTrigger value='stats'>Statistics</TabsTrigger>
-              <TabsTrigger value='achievements'>Achievements</TabsTrigger>
             </TabsList>
 
             <div className='flex flex-wrap items-center gap-2'>
@@ -737,8 +815,8 @@ function UserInfoComponent() {
                   <SelectContent>
                     <SelectItem value='all'>All Leaderboards</SelectItem>
                     <SelectItem value='ranked'>Ranked</SelectItem>
-                    <SelectItem value='vanilla'>Vanilla</SelectItem>
                     <SelectItem value='smallworld'>Smallworld</SelectItem>
+                    <SelectItem value='vanilla'>Vanilla</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -797,73 +875,27 @@ function UserInfoComponent() {
           <TabsContent value='mmr-trends' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <MmrTrendChart games={games} season={season} />
+                <MmrTrendChart
+                  games={games}
+                  season={season}
+                  queueType={leaderboardFilter}
+                />
               </div>
             </div>
           </TabsContent>
           <TabsContent value='winrate-trends' className='m-0'>
             <div className='overflow-hidden rounded-lg border'>
               <div className='overflow-x-auto'>
-                <WinrateTrendChart games={games} season={season} />
+                <WinrateTrendChart
+                  games={games}
+                  season={season}
+                  queueType={leaderboardFilter}
+                />
               </div>
             </div>
           </TabsContent>
           <TabsContent value='deck-stake-stats' className='m-0'>
             <DeckStakeStatsChart games={filteredGames} season={season} />
-          </TabsContent>
-          <TabsContent value='stats' className='m-0'>
-            <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
-              {(rankedLeaderboard || lastRankedGame) && (
-                <LeaderboardStatsCard
-                  title='Ranked Queue Stats'
-                  rank={rankedUserRank?.rank}
-                  mmr={
-                    lastRankedGame
-                      ? Math.trunc(
-                          lastRankedGame.playerMmr + lastRankedGame.mmrChange
-                        )
-                      : undefined
-                  }
-                  icon={<Trophy className='h-5 w-5 text-violet-500' />}
-                  accentColor='text-violet-500'
-                />
-              )}
-
-              {(vanillaLeaderboard || lastVanillaGame) && (
-                <LeaderboardStatsCard
-                  title='Vanilla Queue Stats'
-                  rank={vanillaUserRank?.rank}
-                  mmr={
-                    lastVanillaGame
-                      ? Math.trunc(
-                          lastVanillaGame.playerMmr + lastVanillaGame.mmrChange
-                        )
-                      : undefined
-                  }
-                  icon={<Star className='h-5 w-5 text-amber-500' />}
-                  accentColor='text-amber-500'
-                />
-              )}
-
-              {!rankedLeaderboard &&
-                !vanillaLeaderboard &&
-                !lastRankedGame &&
-                !lastVanillaGame && (
-                  <div className='col-span-2 flex h-40 items-center justify-center rounded-lg border bg-gray-50 dark:bg-zinc-800/50'>
-                    <p className='text-gray-500 dark:text-zinc-400'>
-                      No leaderboard data available
-                    </p>
-                  </div>
-                )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value='achievements' className='m-0'>
-            <div className='flex h-40 items-center justify-center rounded-lg border bg-gray-50 dark:bg-zinc-800/50'>
-              <p className='text-gray-500 dark:text-zinc-400'>
-                Achievements coming soon
-              </p>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

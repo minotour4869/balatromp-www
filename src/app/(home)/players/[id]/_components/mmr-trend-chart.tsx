@@ -31,15 +31,20 @@ const chartConfig = {
 export function MmrTrendChart({
   games,
   season = 'season5',
+  queueType = 'ranked',
 }: {
   games: SelectGames[]
   season?: Season
+  queueType?: string
 }) {
   // Filter games by season if a specific season is selected
   const seasonFilteredGames = filterGamesBySeason(games, season)
 
   const chartData = seasonFilteredGames
-    .filter((game) => game.gameType === 'ranked')
+    .filter((game) => {
+      const targetQueue = queueType === 'all' ? 'ranked' : queueType
+      return game.gameType === targetQueue
+    })
     .map((game) => ({
       date: game.gameTime,
       mmr: game.playerMmr + game.mmrChange,
@@ -54,10 +59,13 @@ export function MmrTrendChart({
       mmrBefore: firstGame.mmrBefore,
     })
   }
+
+  const queueLabel = queueType === 'all' ? 'Ranked' : (queueType.charAt(0).toUpperCase() + queueType.slice(1))
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>MMR Trends</CardTitle>
+        <CardTitle>{queueLabel} MMR Trends</CardTitle>
         <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
       </CardHeader>
       <CardContent className={'p-2'}>
@@ -105,7 +113,7 @@ export function MmrTrendChart({
       </CardContent>
       <CardFooter className='flex-col items-start gap-2 text-sm'>
         <div className='text-muted-foreground leading-none'>
-          Showing only ranked MMR
+          Showing only {queueLabel.toLowerCase()} MMR
         </div>
       </CardFooter>
     </Card>

@@ -22,11 +22,6 @@ const links = [
     icon: <Trophy />,
   },
   {
-    text: 'Blog',
-    url: '/blog',
-    icon: <Rss />,
-  },
-  {
     text: 'Support Us',
     url: '/support-us',
     icon: <CircleDollarSign />,

@@ -3,7 +3,7 @@ import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
 import {DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {SiGithub} from '@icons-pack/react-simple-icons'
-import {ChevronRight, MessageSquare, Trophy, Users} from 'lucide-react'
+import {ChevronRight, CircleArrowRightIcon, MessageSquare, PersonStandingIcon, Trophy, Users} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -190,23 +190,25 @@ export default function Home() {
               </CardHeader>
               <CardContent className='flex-grow'>
                 <p className='mb-4 text-muted-foreground'>
-                  Compete in two distinct queues:
+                  Compete in multiple queues for MMR:
                 </p>
                 <div className='space-y-4'>
                   <div className='space-y-2 text-sm'>
-                    <h4 className='font-semibold'>Vanilla Queue:</h4>
+                    <h4 className='font-semibold'>Ranked Queue:</h4>
                     <ul className='space-y-1'>
-                      <li>• Original game balance</li>
-                      <li>• Has MMR but no MMR-based matchmaking</li>
-                      <li>• Same seed for fair competition</li>
+                      <li>• Rebalanced cards and mechanics, new jokers, and more to create a competitive experience.</li>
                     </ul>
                   </div>
                   <div className='space-y-2 text-sm'>
-                    <h4 className='font-semibold'>Ranked Queue:</h4>
+                    <h4 className='font-semibold'>Smallworld:</h4>
                     <ul className='space-y-1'>
-                      <li>• Rebalanced cards and mechanics</li>
-                      <li>• MMR-based matchmaking</li>
-                      <li>• New jokers, reworked tarots, new planets</li>
+                      <li>• A whole new style of play, with only 25% of everything at your disposal, and showman is ALWAYS active. How will you build?</li>
+                    </ul>
+                  </div>
+                  <div className='space-y-2 text-sm'>
+                    <h4 className='font-semibold'>Vanilla Queue:</h4>
+                    <ul className='space-y-1'>
+                      <li>• Uses the original game balance with no special changes besides same seed.</li>
                     </ul>
                   </div>
                 </div>
@@ -250,13 +252,6 @@ export default function Home() {
                   </li>
                 </ul>
               </CardContent>
-              <div className='mt-auto p-6 pt-0'>
-                <Button variant='outline' className='w-full' asChild>
-                  <Link href='https://discord.gg/bBb5eU2gWc' target='_blank'>
-                    Join Our Discord
-                  </Link>
-                </Button>
-              </div>
             </Card>
           </div>
 
@@ -269,6 +264,16 @@ export default function Home() {
               <Link href='/leaderboards'>
                 View Leaderboards
                 <Trophy className='ml-2 h-4 w-4'/>
+              </Link>
+            </Button>
+            <Button
+                asChild
+                size='lg'
+                className='w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto ml-4'
+            >
+              <Link href='https://discord.gg/bBb5eU2gWc' target='_blank'>
+                Join Our Discord
+                <CircleArrowRightIcon className='ml-2 h-4 w-4'/>
               </Link>
             </Button>
           </div>

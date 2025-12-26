@@ -56,6 +56,7 @@ import {
   getSeasonDisplayName,
 } from '@/shared/seasons'
 import { api } from '@/trpc/react'
+import { getRankData } from '@/shared/ranks'
 import {
   ArrowDown,
   ArrowUp,
@@ -69,54 +70,17 @@ import {
 import Link from 'next/link'
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs'
 
-const RANK_IMAGES = {
-  foil: '/ranks/foil.png',
-  glass: '/ranks/glass2.png',
-  gold: '/ranks/gold.png',
-  holographic: '/ranks/holo.png',
-  lucky: '/ranks/lucky.png',
-  negative: '/ranks/negative.png',
-  polychrome: '/ranks/poly.png',
-  steel: '/ranks/steel.png',
-  stone: '/ranks/stone.png',
-}
-
-const EDITION_THRESHOLD = {
-  FOIL: 50,
-  HOLOGRAPHIC: 10,
-  POLYCHROME: 3,
-  NEGATIVE: 1,
-}
-
-const ENHANCEMENT_THRESHOLD = {
-  STEEL: 250,
-  GOLD: 320,
-  LUCKY: 460,
-  GLASS: 620,
-}
-
-const getMedal = (rank: number, mmr: number, isVanilla?: boolean) => {
-  if (isVanilla) {
+const getMedal = (
+  rank: number,
+  mmr: number,
+  queueType?: string
+) => {
+  const rankData = getRankData(mmr, queueType)
+  if (!rankData) {
     return null
   }
-  let enhancement = RANK_IMAGES.stone
-  let tooltip = 'Stone'
-  if (mmr >= ENHANCEMENT_THRESHOLD.STEEL) {
-    enhancement = RANK_IMAGES.steel
-    tooltip = 'Steel'
-  }
-  if (mmr >= ENHANCEMENT_THRESHOLD.GOLD) {
-    enhancement = RANK_IMAGES.gold
-    tooltip = 'Gold'
-  }
-  if (mmr >= ENHANCEMENT_THRESHOLD.LUCKY) {
-    enhancement = RANK_IMAGES.lucky
-    tooltip = 'Lucky'
-  }
-  if (mmr >= ENHANCEMENT_THRESHOLD.GLASS) {
-    enhancement = RANK_IMAGES.glass
-    tooltip = 'Glass'
-  }
+
+  const { enhancement, tooltip } = rankData
 
   return (
     <TooltipProvider>
@@ -352,8 +316,8 @@ export function LeaderboardPage() {
               <div className='flex flex-col gap-4 md:flex-row md:items-center'>
                 <TabsList className='border border-gray-200 border-b bg-gray-50 dark:border-zinc-800 dark:bg-zinc-800/50'>
                   <TabsTrigger value='ranked'>Ranked</TabsTrigger>
-                  <TabsTrigger value='vanilla'>Vanilla</TabsTrigger>
                   <TabsTrigger value='smallworld'>Smallworld</TabsTrigger>
+                  <TabsTrigger value='vanilla'>Vanilla</TabsTrigger>
                 </TabsList>
 
                 <div className='flex items-center gap-2'>
@@ -427,7 +391,7 @@ export function LeaderboardPage() {
             <div className='m-0 flex flex-1 flex-col'>
               <LeaderboardTable
                 leaderboard={currentLeaderboard}
-                isVanilla={leaderboardType !== 'ranked'}
+                queueType={leaderboardType}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 onSort={handleSort}
@@ -450,15 +414,15 @@ export function LeaderboardPage() {
 interface LeaderboardTableProps {
   leaderboard: any[]
   sortColumn: string
-  isVanilla?: boolean
+  queueType: string
   sortDirection: 'asc' | 'desc'
   onSort: (column: string) => void
-  getMedal: (rank: number, mmr: number, isVanilla?: boolean) => React.ReactNode
+  getMedal: (rank: number, mmr: number, queueType?: string) => React.ReactNode
 }
 
 function RawLeaderboardTable({
   leaderboard,
-  isVanilla,
+  queueType,
   sortColumn,
   sortDirection,
   onSort,
@@ -591,7 +555,7 @@ function RawLeaderboardTable({
                         <span className={cn(entry.rank < 10 && 'ml-[1ch]')}>
                           {entry.rank}
                         </span>
-                        {getMedal(entry.rank, entry.mmr, isVanilla)}
+                        {getMedal(entry.rank, entry.mmr, queueType)}
                       </div>
                     </TableCell>
                     <TableCell>

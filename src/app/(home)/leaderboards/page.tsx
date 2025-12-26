@@ -44,11 +44,11 @@ export default async function Home({
 
   const getChannelId = (type: string, season: Season) => {
     const isOldSeason = season === 'season1' || season === 'season2' || season === 'season3'
-    if (type === 'vanilla') {
-      return isOldSeason ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID
-    }
     if (type === 'smallworld') {
       return isOldSeason ? OLD_SMALLWORLD_CHANNEL : SMALLWORLD_QUEUE_ID
+    }
+    if (type === 'vanilla') {
+      return isOldSeason ? OLD_VANILLA_CHANNEL : VANILLA_QUEUE_ID
     }
     return isOldSeason ? OLD_RANKED_CHANNEL : RANKED_QUEUE_ID
   }

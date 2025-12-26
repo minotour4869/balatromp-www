@@ -33,28 +33,40 @@ const chartConfig = {
 export function WinrateTrendChart({
   games,
   season = 'season5',
+  queueType = 'all',
 }: {
   games: SelectGames[]
   season?: Season
+  queueType?: string
 }) {
   const [gamesWindow, setGamesWindow] = useState(30)
 
   // Filter games by season if a specific season is selected
   const seasonFilteredGames = filterGamesBySeason(games, season)
 
+  // Filter games by queue type
+  const queueFilteredGames =
+    queueType === 'all'
+      ? seasonFilteredGames
+      : seasonFilteredGames.filter(
+          (game) => game.gameType.toLowerCase() === queueType.toLowerCase()
+        )
+
   // Sort games by date (oldest to newest)
-  const sortedGames = [...seasonFilteredGames]
+  const sortedGames = [...queueFilteredGames]
     .sort((a, b) => a.gameTime.getTime() - b.gameTime.getTime())
     .filter((game) => game.result === 'win' || game.result === 'loss')
 
   // Calculate rolling winrate
   const chartData = calculateRollingWinrate(sortedGames, gamesWindow)
 
+  const queueLabel = queueType === 'all' ? 'All' : (queueType.charAt(0).toUpperCase() + queueType.slice(1))
+
   return (
     <Card>
       <CardHeader className='flex flex-row items-center justify-between'>
         <div>
-          <CardTitle>Winrate Trends</CardTitle>
+          <CardTitle>{queueLabel} Winrate Trends</CardTitle>
           <CardDescription>{getSeasonDisplayName(season)}</CardDescription>
         </div>
         <div className='flex w-[200px] flex-col gap-2'>
@@ -67,7 +79,7 @@ export function WinrateTrendChart({
             value={[gamesWindow]}
             onValueChange={(value) => setGamesWindow(value[0] ?? 0)}
             min={5}
-            max={Math.min(100, games.length)}
+            max={Math.max(5, Math.min(100, queueFilteredGames.length))}
             step={1}
           />
         </div>

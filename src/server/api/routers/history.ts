@@ -7,7 +7,9 @@ import {
   botlatro_service,
 } from '@/server/services/botlatro.service'
 import {
+  CASUAL_QUEUE_ID,
   RANKED_QUEUE_ID,
+  SANDBOX_QUEUE_ID,
   SMALLWORLD_QUEUE_ID,
   VANILLA_QUEUE_ID,
 } from '@/shared/constants'
@@ -186,6 +188,10 @@ function getGameType(queue_id: string) {
       return 'smallworld'
     case VANILLA_QUEUE_ID:
       return 'vanilla'
+    case SANDBOX_QUEUE_ID:
+      return 'sandbox'
+    case CASUAL_QUEUE_ID:
+      return 'casual'
     default:
       return 'unknown'
   }
