@@ -80,6 +80,36 @@ export function UserInfo() {
 function unescapeName(str: string) {
   return str.replaceAll('\\', '')
 }
+
+function rankIconComponent(mmr: number, queue: string) {
+  const rankData = getRankData(
+      mmr,
+      queue
+  )
+  if (rankData) {
+    return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <img
+                  src={rankData.enhancement}
+                  alt={rankData.tooltip}
+                  className='h-5'
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{rankData.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+    )
+  }
+  return (
+      <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
+  )
+}
+
+
 function UserInfoComponent() {
   const [filter, setFilter] = useState('all')
   const format = useFormatter()
@@ -555,32 +585,7 @@ function UserInfoComponent() {
                       </span>
                     ) : null
                   }
-                  icon={
-                    (() => {
-                      const rankData = getRankData(rankedUserRank.mmr, 'ranked')
-                      if (rankData) {
-                        return (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <img
-                                  src={rankData.enhancement}
-                                  alt={rankData.tooltip}
-                                  className='h-5'
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{rankData.tooltip}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )
-                      }
-                      return (
-                        <ShieldHalf className='h-5 w-5 text-zink-800 dark:text-zink-200' />
-                      )
-                    })()
-                  }
+                  icon={rankIconComponent(rankedUserRank.mmr, 'ranked')}
                   accentColor='text-zink-800 dark:text-zink-200'
                 />
               ) : (
@@ -588,9 +593,7 @@ function UserInfoComponent() {
                   title='Ranked MMR'
                   value={0}
                   customValue='N/A'
-                  icon={
-                    <ShieldHalf className='h-5 w-5 text-zink-800 dark:text-zink-200' />
-                  }
+                  icon={rankIconComponent(0, 'ranked')}
                   accentColor='text-zink-800 dark:text-zink-200'
                   description='No data'
                 />
@@ -600,9 +603,7 @@ function UserInfoComponent() {
                   <StatsCard
                     title='Vanilla MMR'
                     value={Math.round(vanillaUserRank.mmr)}
-                    icon={
-                      <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
-                    }
+                    icon={rankIconComponent(vanillaUserRank.mmr, 'vanilla')}
                     accentColor='text-zink-800 dark:text-zink-200'
                     description={
                       lastVanillaGame ? (
@@ -638,9 +639,7 @@ function UserInfoComponent() {
                     title='Vanilla MMR'
                     value={0}
                     customValue='N/A'
-                    icon={
-                      <IceCreamCone className='h-5 w-5 text-zink-800 dark:text-zink-200' />
-                    }
+                    icon={rankIconComponent(0, 'vanilla')}
                     accentColor='text-zink-800 dark:text-zink-200'
                     description='No data'
                   />
@@ -650,35 +649,7 @@ function UserInfoComponent() {
                   <StatsCard
                     title='Smallworld MMR'
                     value={Math.round(smallWorldUserRank.mmr)}
-                    icon={
-                      (() => {
-                        const rankData = getRankData(
-                          smallWorldUserRank.mmr,
-                          'smallworld'
-                        )
-                        if (rankData) {
-                          return (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <img
-                                    src={rankData.enhancement}
-                                    alt={rankData.tooltip}
-                                    className='h-5'
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{rankData.tooltip}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )
-                        }
-                        return (
-                          <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
-                        )
-                      })()
-                    }
+                    icon={rankIconComponent(smallWorldUserRank.mmr, 'smallworld')}
                     accentColor='text-zink-800 dark:text-zink-200'
                     description={
                       lastSmallworldGame ? (
@@ -714,9 +685,7 @@ function UserInfoComponent() {
                     title='Smallworld MMR'
                     value={0}
                     customValue='N/A'
-                    icon={
-                      <GlobeIcon className='h-4 w-4 text-zink-800 dark:text-zink-200' />
-                    }
+                    icon={rankIconComponent(0, 'smallworld')}
                     accentColor='text-zink-800 dark:text-zink-200'
                     description='No data'
                   />
@@ -734,7 +703,7 @@ function UserInfoComponent() {
                     </div>
                   </div>
                 }
-                icon={<Trophy className='h-5 w-5' />}
+                icon={rankIconComponent(0, 'ranked')}
                 description={
                   !mostPlayedRanked.deck && !mostPlayedRanked.stake
                     ? 'No Data'
@@ -754,7 +723,7 @@ function UserInfoComponent() {
                     </div>
                   </div>
                 }
-                icon={<IceCreamCone className='h-5 w-5' />}
+                icon={rankIconComponent(0, 'vanilla')}
                 description={
                   !mostPlayedVanilla.deck && !mostPlayedVanilla.stake
                     ? 'No Data'
@@ -774,7 +743,7 @@ function UserInfoComponent() {
                     </div>
                   </div>
                 }
-                icon={<GlobeIcon className='h-5 w-5' />}
+                icon={rankIconComponent(0, 'smallworld')}
                 description={
                   !mostPlayedSmallworld.deck && !mostPlayedSmallworld.stake
                     ? 'No Data'
