@@ -1,10 +1,8 @@
 import crypto from 'node:crypto'
 import { globalEmitter } from '@/lib/events'
-import { syncHistory } from '@/server/api/routers/history'
 import type { PlayerState } from '@/server/api/routers/player-state'
 import { PLAYER_STATE_KEY, redis } from '@/server/redis'
 import { leaderboardService } from '@/server/services/leaderboard'
-import { RANKED_CHANNEL, VANILLA_CHANNEL } from '@/shared/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 const EXPECTED_QUERY_SECRET = process.env.WEBHOOK_QUERY_SECRET
@@ -21,10 +19,10 @@ function verifyQuerySecret(req: NextRequest): boolean {
     return false
   }
 
-  const providedSecret = req.nextUrl.searchParams.get(QUERY_PARAM_NAME)
+  const providedSecret = req.headers.get('Authorization')?.split('Bearer ')[1]
 
   if (!providedSecret) {
-    console.warn(`Query parameter "${QUERY_PARAM_NAME}" missing.`)
+    console.warn('Auth token is missing.')
     return false
   }
 
@@ -66,7 +64,11 @@ export async function POST(req: NextRequest) {
           status: 'queuing',
           queueStartTime: Date.now(),
         }
-        const userId = payload.new_players[0].id
+        const userId = payload.new_players?.[0]?.id
+        if (!userId) {
+          console.error('JOIN_QUEUE missing player ID', payload)
+          break
+        }
         console.log('-----JOIN QUEUE-----')
         console.dir(payload, { depth: null })
         console.log(userId)
@@ -95,14 +97,17 @@ export async function POST(req: NextRequest) {
       }
 
       case 'MATCH_COMPLETED': {
-        const playerIds = payload.teams.map((p: any) => p[0].id) as string[]
-        console.log({ playerIds })
-        await syncHistory()
-        await Promise.allSettled(
-          [RANKED_CHANNEL].map((id) =>
-            leaderboardService.refreshLeaderboard(id)
-          )
-        )
+        const playerIds = payload.teamResults?.teams
+          ?.map((p: any) => p?.[0]?.id)
+          .filter(Boolean) as string[]
+        if (!playerIds?.length) {
+          console.error('MATCH_COMPLETED missing player IDs', payload)
+          break
+        }
+        const queueId = payload.queueId
+        await Promise.allSettled([
+          leaderboardService.refreshLeaderboard(queueId),
+        ])
         await Promise.all(
           playerIds.map(async (id) => {
             await redis.del(PLAYER_STATE_KEY(id))
@@ -114,7 +119,11 @@ export async function POST(req: NextRequest) {
       }
 
       case 'LEAVE_QUEUE': {
-        const userId = payload.players_removed[0].id
+        const userId = payload.players_removed?.[0]?.id
+        if (!userId) {
+          console.error('LEAVE_QUEUE missing player ID', payload)
+          break
+        }
         await redis.del(PLAYER_STATE_KEY(userId))
         globalEmitter.emit(`state-change:${userId}`, { status: 'idle' })
         break
@@ -122,7 +131,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      '--- Verified Webhook Received (Query Auth) ---',
+      '--- Verified Webhook Received (Auth) ---',
       new Date().toISOString(),
       '---\n',
       JSON.stringify(payload, null, 2),

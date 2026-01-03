@@ -2,8 +2,9 @@
 
 import { cn } from '@/lib/utils'
 import type { SelectGames } from '@/server/db/types'
-import type { LeaderboardEntry } from '@/server/services/neatqueue.service'
-import { RANKED_CHANNEL } from '@/shared/constants'
+import type { LeaderboardEntry } from '@/server/services/botlatro.service'
+import { RANKED_QUEUE_ID } from '@/shared/constants'
+import { filterGamesBySeason } from '@/shared/seasons'
 import { api } from '@/trpc/react'
 import { Swords } from 'lucide-react'
 import { useParams } from 'next/navigation'
@@ -66,11 +67,12 @@ export function StreamCardClient() {
 
   const [gamesQueryResult, gamesQuery] =
     api.history.user_games.useSuspenseQuery({ user_id: id })
-  const games = gamesQueryResult || []
+  const allGames = gamesQueryResult || []
+  const games = filterGamesBySeason(allGames, 'season5')
 
   const [rankedUserRank, rankedUserQuery] =
     api.leaderboard.get_user_rank.useSuspenseQuery({
-      channel_id: RANKED_CHANNEL,
+      channel_id: RANKED_QUEUE_ID,
       user_id: id,
     })
 
@@ -107,6 +109,7 @@ export function StreamCardClient() {
       }
     }
   }
+
   return (
     <div
       className={'flex items-center justify-between gap-2 font-m6x11'}
@@ -171,10 +174,11 @@ function Opponent({ id, wins }: { id: string; wins?: number }) {
   const { data: gamesQueryResult } = api.history.user_games.useQuery({
     user_id: id,
   })
-  const games = gamesQueryResult || []
+  const allGames = gamesQueryResult || []
+  const games = filterGamesBySeason(allGames, 'season5')
 
   const { data: rankedUserRank } = api.leaderboard.get_user_rank.useQuery({
-    channel_id: RANKED_CHANNEL,
+    channel_id: RANKED_QUEUE_ID,
     user_id: id,
   })
   if (!rankedUserRank || !games?.length) {

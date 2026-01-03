@@ -34,9 +34,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { jokers } from '@/shared/jokers'
+import { vouchers } from '@/shared/vouchers'
 import { useFormatter } from 'next-intl'
 import Image from 'next/image'
-import { Fragment, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Fragment, useEffect, useState } from 'react'
 import { type PvpBlind, PvpBlindsCard } from './_components/pvp-blinds'
 // Define the structure for individual log events within a game
 type LogEvent = {
@@ -45,7 +47,26 @@ type LogEvent = {
   type: 'event' | 'status' | 'system' | 'shop' | 'action' | 'error' | 'info'
   img?: string
 }
-
+const STAKE = {
+  1: 'White Stake',
+  2: 'Red Stake',
+  3: 'Green Stake',
+  4: 'Black Stake',
+  5: 'Blue Stake',
+  6: 'Purple Stake',
+  7: 'Orange Stake',
+  8: 'Gold Stake',
+}
+const STAKE_IMG = {
+  1: '/stakes/white_stake.png',
+  2: '/stakes/red_stake.png',
+  3: '/stakes/green_stake.png',
+  4: '/stakes/black_stake.png',
+  5: '/stakes/blue_stake.png',
+  6: '/stakes/purple_stake.png',
+  7: '/stakes/orange_stake.png',
+  8: '/stakes/gold_stake.png',
+}
 // PVP blind types (PvpBlind and HandScore) are now imported from the PvpBlindsCard component
 
 // Define the structure for game options parsed from lobbyOptions
@@ -87,7 +108,12 @@ type Game = {
   logOwnerFinalJokers: string[] // Log owner's final jokers
   opponentFinalJokers: string[] // Opponent's final jokers
   events: LogEvent[]
-  rerolls: number
+  rerolls: number // Log owner's reroll count
+  rerollCostTotal: number // Log owner's total reroll cost
+  logOwnerVouchers: string[] // Log owner's vouchers
+  opponentRerolls: number // Opponent's reroll count
+  opponentRerollCostTotal: number // Opponent's total reroll cost
+  opponentVouchers: string[] // Opponent's vouchers
   winner: 'logOwner' | 'opponent' | null // Who won the game
   pvpBlinds: PvpBlind[] // PVP blind data
   currentPvpBlind: number | null // Current PVP blind number
@@ -120,6 +146,11 @@ const initGame = (id: number, startDate: Date): Game => ({
   opponentFinalJokers: [],
   events: [],
   rerolls: 0,
+  rerollCostTotal: 0,
+  logOwnerVouchers: [],
+  opponentRerolls: 0,
+  opponentRerollCostTotal: 0,
+  opponentVouchers: [],
   winner: null,
   pvpBlinds: [],
   currentPvpBlind: null,
@@ -152,19 +183,143 @@ function boolStrToText(str: string | boolean | undefined | null): string {
   return str
 }
 
+// Helper function to convert date strings to Date objects recursively
+function convertDates<T>(obj: T): T {
+  if (!obj || typeof obj !== 'object') {
+    return obj
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertDates(item)) as unknown as T
+  }
+
+  const result = { ...obj } as any
+
+  // Process each property
+  for (const key in result) {
+    const value = result[key]
+
+    // Check if the value is a date string (ISO format)
+    if (
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+    ) {
+      result[key] = new Date(value)
+    }
+    // Also handle date strings in the format used in the logs (YYYY-MM-DD HH:MM:SS)
+    else if (
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value)
+    ) {
+      result[key] = new Date(value)
+    }
+    // Recursively process nested objects and arrays
+    else if (value && typeof value === 'object') {
+      result[key] = convertDates(value)
+    }
+  }
+
+  return result
+}
+
 // Main component
 export default function LogParser() {
   const formatter = useFormatter()
+  const searchParams = useSearchParams()
   const [parsedGames, setParsedGames] = useState<Game[]>([])
+  console.log(parsedGames)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const parseLogFile = async (file: File) => {
+  // Check for logId query parameter and load the parsed data if it exists
+  useEffect(() => {
+    const logId = searchParams.get('logId')
+    const fileUrl = searchParams.get('fileUrl')
+
+    if (logId) {
+      // If logId is provided, fetch the parsed data from the database
+      setIsLoading(true)
+      setError(null)
+      setParsedGames([])
+
+      fetch(`/api/logs?id=${logId}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch log file')
+          }
+          return response.json()
+        })
+        .then((data) => {
+          // Use the parsed JSON data directly from the database
+          if (data.parsedJson && Array.isArray(data.parsedJson)) {
+            const parsedGamesWithDates = convertDates(data.parsedJson)
+            setParsedGames(parsedGamesWithDates)
+          } else {
+            setError('No parsed games found in the log file.')
+          }
+          setIsLoading(false)
+        })
+        .catch((err) => {
+          console.error('Error loading log file:', err)
+          setError(`Failed to load log file: ${err.message}`)
+          setIsLoading(false)
+        })
+    } else if (fileUrl) {
+      // For backward compatibility, still support fileUrl
+      // But this should be deprecated in favor of logId
+      setIsLoading(true)
+      setError(null)
+      setParsedGames([])
+
+      fetch(fileUrl)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch log file')
+          }
+          return response.text()
+        })
+        .then((content) => {
+          // Create a File object from the content
+          const file = new File([content], 'log.txt', { type: 'text/plain' })
+          // Parse the file
+          parseLogFile(file, true)
+        })
+        .catch((err) => {
+          console.error('Error loading log file:', err)
+          setError(`Failed to load log file: ${err.message}`)
+          setIsLoading(false)
+        })
+    }
+  }, [searchParams])
+
+  const parseLogFile = async (file: File, skipUpload?: boolean) => {
     setIsLoading(true)
     setError(null)
     setParsedGames([])
+    let logFileId = null
 
     try {
+      // Create a FormData object to send the file
+      const formData = new FormData()
+      formData.append('file', file)
+
+      if (!skipUpload) {
+        const response = await fetch('/api/logs/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to upload log file')
+        }
+
+        const responseData = await response.json()
+        logFileId = responseData.id
+      }
+      // Upload the file to the server
+
+      // Get the file content
       const content = await file.text()
       const logLines = content.split('\n')
 
@@ -203,6 +358,34 @@ export default function LogParser() {
           }
           continue
         }
+        if (line.includes('Client got nemesisEndGameStats message')) {
+          if (currentGame) {
+            // Extract Opponent Reroll Count
+            const rerollCountMatch = line.match(/\(reroll_count: (\d+)\)/)
+            if (rerollCountMatch?.[1]) {
+              currentGame.opponentRerolls = Number.parseInt(
+                rerollCountMatch[1],
+                10
+              )
+            }
+
+            // Extract Opponent Reroll Cost Total
+            const rerollCostMatch = line.match(/\(reroll_cost_total: (\d+)\)/)
+            if (rerollCostMatch?.[1]) {
+              currentGame.opponentRerollCostTotal = Number.parseInt(
+                rerollCostMatch[1],
+                10
+              )
+            }
+
+            // Extract Opponent Vouchers
+            const vouchersMatch = line.match(/\(vouchers: ([^)]+)\)/)
+            if (vouchersMatch?.[1]) {
+              currentGame.opponentVouchers = vouchersMatch[1].split('-')
+            }
+          }
+          continue
+        }
         if (line.includes('Client sent message: action:receiveEndGameJokers')) {
           if (currentGame) {
             // Mark end date if not already set (might happen slightly before 'got')
@@ -214,6 +397,31 @@ export default function LogParser() {
             if (keysMatch?.[1]) {
               const str = keysMatch?.[1]
               currentGame.logOwnerFinalJokers = await parseJokersFromString(str)
+            }
+          }
+          continue
+        }
+        if (line.includes('Client sent message: action:nemesisEndGameStats')) {
+          if (currentGame) {
+            // Extract Log Owner Reroll Count
+            const rerollCountMatch = line.match(/reroll_count:(\d+)/)
+            if (rerollCountMatch?.[1]) {
+              currentGame.rerolls = Number.parseInt(rerollCountMatch[1], 10)
+            }
+
+            // Extract Log Owner Reroll Cost Total
+            const rerollCostMatch = line.match(/reroll_cost_total:(\d+)/)
+            if (rerollCostMatch?.[1]) {
+              currentGame.rerollCostTotal = Number.parseInt(
+                rerollCostMatch[1],
+                10
+              )
+            }
+
+            // Extract Log Owner Vouchers
+            const vouchersMatch = line.match(/vouchers:(.+)$/)
+            if (vouchersMatch?.[1]) {
+              currentGame.logOwnerVouchers = vouchersMatch[1].split('-')
             }
           }
           continue
@@ -289,7 +497,16 @@ export default function LogParser() {
 
         // --- Lobby and Options Parsing ---
         if (lineLower.includes('lobbyoptions')) {
-          const optionsStr = line.split(' Client sent message:')[1]?.trim()
+          const optionsStr = line.includes('Client got lobbyOptions message:')
+            ? line
+                .split(' Client got lobbyOptions message:  ')[1]
+                ?.trim()
+                ?.replaceAll('(', '')
+                ?.replaceAll(')', ',')
+            : // ?.replaceAll(' ', '')
+              line
+                .split(' Client sent message:')[1]
+                ?.trim()
           if (optionsStr) {
             lastSeenLobbyOptions = parseLobbyOptions(optionsStr)
             if (currentGame && !currentGame.options) {
@@ -481,6 +698,20 @@ export default function LogParser() {
           currentGame.events.push({
             timestamp,
             text: 'You lost the game.',
+            type: 'system',
+          })
+          continue
+        }
+
+        // Detect disconnect message
+        if (
+          line.includes(
+            'Client got disconnected message:  (action: disconnected)'
+          )
+        ) {
+          currentGame.events.push({
+            timestamp,
+            text: 'Log owner disconnected',
             type: 'system',
           })
           continue
@@ -690,23 +921,35 @@ export default function LogParser() {
       } // End of line processing loop
 
       if (currentGame) {
-        if (!currentGame.endDate) {
-          const lastEventTime =
-            currentGame.events.length > 0
-              ? currentGame.events[currentGame.events.length - 1]?.timestamp
-              : null
-          currentGame.endDate =
-            lastEventTime ?? lastProcessedTimestamp ?? currentGame.startDate // Fallback chain
+        if (currentGame.endDate) {
+          currentGame.durationSeconds =
+            (currentGame.endDate.getTime() - currentGame.startDate.getTime()) / 1000
+
+          games.push(currentGame)
         }
-        currentGame.durationSeconds = currentGame.endDate
-          ? (currentGame.endDate.getTime() - currentGame.startDate.getTime()) /
-            1000
-          : null
-        games.push(currentGame)
       }
 
       if (games.length === 0) {
         setError('No games found in the log file.')
+      }
+
+      // Send the parsed games to the server
+      if (!skipUpload) {
+        console.log('Sending parsed games to server...')
+        const uploadResponse = await fetch('/api/logs/upload', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            logFileId,
+            parsedGames: games,
+          }),
+        })
+
+        if (!uploadResponse.ok) {
+          console.error('Failed to save parsed games')
+        }
       }
 
       setParsedGames(games)
@@ -761,8 +1004,15 @@ export default function LogParser() {
         {error && <p className='text-red-500'>{error}</p>}
 
         {parsedGames.length > 0 && (
-          <Tabs defaultValue={defaultTabValue} className='mt-6 w-full'>
-            <TabsList className='grid h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
+          <Tabs
+            defaultValue={defaultTabValue}
+            className='flex flex-1 flex-col px-0 py-4 md:py-6'
+          >
+            <TabsList
+              className={
+                'grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+              }
+            >
               {parsedGames.map((game) => {
                 // Determine labels for the tab trigger, handling potential name conflicts
                 const useGenericLabels =
@@ -814,16 +1064,26 @@ export default function LogParser() {
                       </CardTitle>
                       <CardDescription>
                         Started:{' '}
-                        {formatter.dateTime(game.startDate, {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}{' '}
+                        {formatter.dateTime(
+                          game.startDate instanceof Date
+                            ? game.startDate
+                            : new Date(game.startDate),
+                          {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          }
+                        )}{' '}
                         | Ended:{' '}
                         {game.endDate
-                          ? formatter.dateTime(game.endDate, {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })
+                          ? formatter.dateTime(
+                              game.endDate instanceof Date
+                                ? game.endDate
+                                : new Date(game.endDate),
+                              {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              }
+                            )
                           : 'N/A'}{' '}
                         | Duration: {formatDuration(game.durationSeconds)}
                       </CardDescription>
@@ -858,8 +1118,18 @@ export default function LogParser() {
                                   : opponentLabel}
                             </p>
                             <p>
-                              <strong>Rerolls:</strong>{' '}
+                              <strong>{ownerLabel} Rerolls:</strong>{' '}
                               {game.rerolls || 'Unknown'}
+                              {game.rerollCostTotal
+                                ? ` (Cost: ${game.rerollCostTotal})`
+                                : ''}
+                            </p>
+                            <p>
+                              <strong>{opponentLabel} Rerolls:</strong>{' '}
+                              {game.opponentRerolls || 'Unknown'}
+                              {game.opponentRerollCostTotal
+                                ? ` (Cost: ${game.opponentRerollCostTotal})`
+                                : ''}
                             </p>
                             <p>
                               <strong>Deck:</strong> {game.deck || 'Unknown'}
@@ -871,10 +1141,26 @@ export default function LogParser() {
                               <strong>Ruleset:</strong>{' '}
                               {game.options?.ruleset || 'Default'}
                             </p>
-                            <p>
+                            <div className={'flex gap-1.5'}>
                               <strong>Stake:</strong>{' '}
-                              {game.options?.stake ?? 'Unknown'}
-                            </p>
+                              {game.options?.stake && (
+                                <div className={'flex items-center gap-1.5'}>
+                                  {/*@ts-ignore*/}
+                                  {STAKE_IMG[game.options.stake] && (
+                                    <img
+                                      className={'size-5 shrink-0'}
+                                      width={20}
+                                      height={20}
+                                      // @ts-ignore
+                                      src={STAKE_IMG[game.options.stake]}
+                                      alt={'Stake'}
+                                    />
+                                  )}
+                                  {/*@ts-ignore*/}
+                                  {STAKE[game.options?.stake] ?? 'Unknown'}
+                                </div>
+                              )}
+                            </div>
                             <p>
                               <strong>Different Decks:</strong>{' '}
                               {boolStrToText(game.options?.different_decks)}
@@ -922,9 +1208,14 @@ export default function LogParser() {
                                         <span
                                           className={`${event.text.includes('Opponent') ? 'ml-2' : 'mr-2'} font-mono`}
                                         >
-                                          {formatter.dateTime(event.timestamp, {
-                                            timeStyle: 'medium',
-                                          })}
+                                          {formatter.dateTime(
+                                            event.timestamp instanceof Date
+                                              ? event.timestamp
+                                              : new Date(event.timestamp),
+                                            {
+                                              timeStyle: 'medium',
+                                            }
+                                          )}
                                         </span>
                                         <span>{event.text}</span>
                                       </div>
@@ -933,6 +1224,8 @@ export default function LogParser() {
                                           className={`${event.text.includes('Opponent') ? 'flex justify-end' : ''}`}
                                         >
                                           <Image
+                                            width={142}
+                                            height={190}
                                             src={event.img}
                                             alt={event.img}
                                           />
@@ -1003,8 +1296,10 @@ export default function LogParser() {
                                           }
                                         >
                                           <Image
-                                            src={`/cards/${jokerName}.png`}
+                                            src={`/cards/${jokerName}.${jokerName === 'j_hologram' ? 'gif' : 'png'}`}
                                             alt={cleanName}
+                                            width={142}
+                                            height={190}
                                           />
                                           <span>{cleanName}</span>
                                         </div>
@@ -1042,8 +1337,97 @@ export default function LogParser() {
                                           }
                                         >
                                           <Image
-                                            src={`/cards/${jokerName}.png`}
+                                            src={`/cards/${jokerName}.${jokerName === 'j_hologram' ? 'gif' : 'png'}`}
                                             alt={cleanName}
+                                            width={142}
+                                            height={190}
+                                          />
+                                          <span>{cleanName}</span>
+                                        </div>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : (
+                                <p className='text-gray-500 italic'>
+                                  No data found.
+                                </p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className='text-lg'>Vouchers</CardTitle>
+                          </CardHeader>
+                          <CardContent className='space-y-3 text-sm'>
+                            <div>
+                              <strong>
+                                {ownerLabel}
+                                {game.winner === 'logOwner' ? ' 🏆' : ''}:
+                              </strong>
+                              {game.logOwnerVouchers?.length > 0 ? (
+                                <ul className='mt-3 ml-4 flex list-inside gap-3'>
+                                  {game.logOwnerVouchers.map((voucher, i) => {
+                                    if (!voucher) {
+                                      return null
+                                    }
+                                    const cleanName =
+                                      vouchers[voucher]?.name ??
+                                      cleanVoucherKey(voucher)
+                                    return (
+                                      // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
+                                      <li key={i} className={'list-none'}>
+                                        <div
+                                          className={
+                                            'flex flex-col items-center justify-center gap-2'
+                                          }
+                                        >
+                                          <Image
+                                            src={`/cards/${voucher}.png`}
+                                            alt={cleanName}
+                                            width={142}
+                                            height={190}
+                                          />
+                                          <span>{cleanName}</span>
+                                        </div>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : (
+                                <p className='text-gray-500 italic'>
+                                  No data found.
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <strong>
+                                {opponentLabel}
+                                {game.winner === 'opponent' ? ' 🏆' : ''}:
+                              </strong>
+                              {game.opponentVouchers?.length > 0 ? (
+                                <ul className='mt-3 ml-4 flex list-inside gap-3'>
+                                  {game.opponentVouchers.map((voucher, i) => {
+                                    if (!voucher) {
+                                      return null
+                                    }
+                                    const cleanName =
+                                      vouchers[voucher]?.name ??
+                                      cleanVoucherKey(voucher)
+                                    return (
+                                      // biome-ignore lint/suspicious/noArrayIndexKey: Simple list
+                                      <li key={i} className={'list-none'}>
+                                        <div
+                                          className={
+                                            'flex flex-col items-center justify-center gap-2'
+                                          }
+                                        >
+                                          <Image
+                                            src={`/cards/${voucher}.png`}
+                                            alt={cleanName}
+                                            width={142}
+                                            height={190}
                                           />
                                           <span>{cleanName}</span>
                                         </div>
@@ -1228,6 +1612,7 @@ function ShopSpendingTable({
 
 // Helper to parse lobby options string (no changes needed)
 function parseLobbyOptions(optionsStr: string): GameOptions {
+  console.log(optionsStr)
   const options: GameOptions = {}
   const params = optionsStr.split(',')
   for (const param of params) {
@@ -1262,6 +1647,7 @@ function parseLobbyOptions(optionsStr: string): GameOptions {
         break
     }
   }
+  console.log(options)
   return options
 }
 
@@ -1417,6 +1803,18 @@ function cleanJokerKey(key: string): string {
     )
 }
 
+function cleanVoucherKey(key: string): string {
+  if (!key) return ''
+  return key
+    .trim()
+    .replace(/^v_/, '') // Remove prefix v_
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(
+      /\w\S*/g, // Capitalize each word (Title Case)
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    )
+}
+
 type JsonValue =
   | string
   | number
@@ -1452,7 +1850,6 @@ async function decodePackedString(encodedString: string): Promise<JsonValue> {
 
     // Convert Lua table to JSON
     const jsonString = await luaTableToJson(decompressedString)
-    console.log(jsonString)
     const result = JSON.parse(jsonString) as JsonValue
     return result
   } catch (error) {

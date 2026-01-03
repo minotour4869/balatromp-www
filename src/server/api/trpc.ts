@@ -46,7 +46,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
-    return {
+    // Avoid retaining full error objects which can leak memory
+    // Only include essential validation errors
+    const formatted = {
       ...shape,
       data: {
         ...shape.data,
@@ -54,6 +56,13 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
           error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
     }
+
+    // Clear stack trace in production to prevent retention
+    if (process.env.NODE_ENV === 'production') {
+      delete (formatted as any).stack
+    }
+
+    return formatted
   },
 })
 
@@ -135,12 +144,28 @@ export const protectedProcedure = t.procedure
 export const adminProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.session?.user || ctx.session.user.role !== 'admin') {
+    if (
+      !ctx.session?.user ||
+      !['owner', 'admin'].includes(ctx.session.user.role)
+    ) {
       throw new TRPCError({ code: 'FORBIDDEN' })
     }
     return next({
       ctx: {
         // infers the `session` as non-nullable
+        session: { ...ctx.session, user: ctx.session.user },
+      },
+    })
+  })
+
+export const ownerProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user || ctx.session.user.role !== 'owner') {
+      throw new TRPCError({ code: 'FORBIDDEN' })
+    }
+    return next({
+      ctx: {
         session: { ...ctx.session, user: ctx.session.user },
       },
     })

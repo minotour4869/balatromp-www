@@ -1,6 +1,13 @@
 import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
-import { BarChart3, BookOpen, CircleDollarSign, Trophy, Upload } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  CircleDollarSign,
+  Rss,
+  Trophy,
+  Upload,
+} from 'lucide-react'
 import { Header } from './_components/header'
 
 const links = [
@@ -13,10 +20,6 @@ const links = [
     text: 'Leaderboards',
     url: '/leaderboards',
     icon: <Trophy />,
-  },
-  {
-    text: 'Major League Balatro',
-    url: '/major-league-balatro',
   },
   {
     text: 'Support Us',

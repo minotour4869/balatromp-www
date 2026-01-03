@@ -4,6 +4,7 @@ import { Hands } from '@/app/_components/hands'
 import { JokerCard } from '@/app/_components/joker-card'
 import { Money } from '@/app/_components/money'
 import { Mult } from '@/app/_components/mult'
+import { Nemesis } from '@/app/_components/nemesis'
 import { Spectral } from '@/app/_components/spectral'
 import { Xmult } from '@/app/_components/xmult'
 import { Button } from '@/components/ui/button'
@@ -71,6 +72,7 @@ export default async function Page(props: {
             Xmult: (props) => <Xmult {...(props as any)} />,
             Spectral: (props) => <Spectral {...(props as any)} />,
             Mult: (props) => <Mult {...(props as any)} />,
+            Nemesis: (props) => <Nemesis {...(props as any)} />,
           }}
         />
       </DocsBody>

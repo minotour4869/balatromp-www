@@ -1,7 +1,7 @@
 import '@/styles/globals.css'
+import CustomSearchDialog from '@/app/_components/custom-search-dialog'
 import { Toaster } from '@/components/ui/sonner'
 import { TRPCReactProvider } from '@/trpc/react'
-import { Banner } from 'fumadocs-ui/components/banner'
 import { RootProvider } from 'fumadocs-ui/provider'
 import type { Metadata } from 'next'
 import { SessionProvider } from 'next-auth/react'
@@ -10,6 +10,7 @@ import { getLocale } from 'next-intl/server'
 import PlausibleProvider from 'next-plausible'
 import { Geist } from 'next/font/google'
 import localFont from 'next/font/local'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 export const metadata: Metadata = {
   title: {
     template: '%s | Balatro Multiplayer',
@@ -67,7 +68,15 @@ export default async function RootLayout({
         <TRPCReactProvider>
           <NextIntlClientProvider>
             <SessionProvider>
-              <RootProvider>{children}</RootProvider>
+              <NuqsAdapter>
+                <RootProvider
+                  search={{
+                    SearchDialog: CustomSearchDialog,
+                  }}
+                >
+                  {children}
+                </RootProvider>
+              </NuqsAdapter>
             </SessionProvider>
           </NextIntlClientProvider>
         </TRPCReactProvider>

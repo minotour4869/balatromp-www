@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  boolean,
   index,
   integer,
   json,
@@ -9,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core'
 import type { AdapterAccount } from 'next-auth/adapters'
 
@@ -29,6 +31,7 @@ export const player_games = pgTable(
   'player_games',
   {
     playerId: text('player_id').notNull(),
+    queueId: text('queue_id'),
     playerName: text('player_name').notNull(),
     gameId: integer('game_id').notNull(),
     gameTime: timestamp('game_time').notNull(),
@@ -39,11 +42,15 @@ export const player_games = pgTable(
     opponentId: text('opponent_id').notNull(),
     opponentName: text('opponent_name').notNull(),
     opponentMmr: real('opponent_mmr').notNull(),
+    deck: text('deck'),
+    stake: text('stake'),
     result: text('result').notNull(),
+    season: text('season'),
   },
   (t) => [
     primaryKey({ columns: [t.playerId, t.gameNum] }),
     uniqueIndex('game_num_per_player_idx').on(t.playerId, t.gameNum),
+    index('season_idx').on(t.season),
   ]
 )
 
@@ -63,6 +70,8 @@ export const users = pgTable('user', (d) => ({
     .default(sql`CURRENT_TIMESTAMP`),
   image: d.varchar({ length: 255 }),
   discord_id: d.varchar({ length: 255 }),
+  twitch_url: d.varchar({ length: 255 }),
+  youtube_url: d.varchar({ length: 255 }),
   role: d.varchar({ length: 255 }).notNull().default('user'),
 }))
 
@@ -161,3 +170,75 @@ export const releasesRelations = relations(releases, ({ one }) => ({
     references: [branches.id],
   }),
 }))
+
+export const logFiles = pgTable('log_files', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  userId: text('user_id').references(() => users.id),
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(),
+  parsedJson: json('parsed_json').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const logFilesRelations = relations(logFiles, ({ one }) => ({
+  user: one(users, {
+    fields: [logFiles.userId],
+    references: [users.id],
+  }),
+}))
+
+export const leaderboardSnapshots = pgTable('leaderboard_snapshots', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  channelId: text('channel_id').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  data: json('data').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const leaderboardSnapshotsRelations = relations(
+  leaderboardSnapshots,
+  ({}) => ({})
+)
+
+export const transcripts = pgTable('transcripts', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  gameNumber: integer('game_number').notNull().unique(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const blogPosts = pgTable('blog_posts', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  title: varchar('title', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  content: text('content').notNull(),
+  excerpt: text('excerpt'),
+  published: boolean('published').notNull().default(false),
+  authorId: varchar('author_id', { length: 255 })
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
+
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  author: one(users, {
+    fields: [blogPosts.authorId],
+    references: [users.id],
+  }),
+}))
+
+export const memoryLogs = pgTable('memory_logs', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  runId: varchar('run_id', { length: 36 }).notNull(),
+  label: varchar('label', { length: 100 }).notNull(),
+  heapUsedMb: real('heap_used_mb').notNull(),
+  heapTotalMb: real('heap_total_mb').notNull(),
+  rssMb: real('rss_mb').notNull(),
+  externalMb: real('external_mb').notNull(),
+  metadata: json('metadata'),
+})

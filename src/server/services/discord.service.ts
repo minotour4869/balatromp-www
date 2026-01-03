@@ -1,24 +1,64 @@
 import { env } from '@/env'
-import ky from 'ky'
+import { redis } from '@/server/redis'
 
 const DISCORD_URL = 'https://discord.com/api/v10'
-const instance = ky.create({
-  prefixUrl: DISCORD_URL,
-  headers: {
-    Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-  },
-  timeout: 10000,
-})
+const CACHE_TTL = 60 * 60 * 24 // 24 hours in seconds
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit & { retryLimit?: number } = {}
+): Promise<Response> {
+  const { retryLimit = 3, ...fetchOptions } = options
+  const response = await fetch(url, fetchOptions)
+
+  // Handle rate limiting
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('retry-after')
+    const delayMs = retryAfter ? Number.parseFloat(retryAfter) * 1000 : 1000
+    console.log(`[Discord] Rate limited, waiting ${delayMs}ms before retry`)
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+    return fetchWithRetry(url, { ...options, retryLimit: retryLimit - 1 })
+  }
+
+  // Retry on server errors
+  if ([500, 502, 503, 504].includes(response.status) && retryLimit > 0) {
+    return fetchWithRetry(url, { ...options, retryLimit: retryLimit - 1 })
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+  }
+
+  return response
+}
 
 export const discord_service = {
   get_user_by_id: async (user_id: string) => {
-    const res = await instance.get(`users/${user_id}`)
-    const res_json = await res.json<DiscordUser>()
+    const cache_key = `discord:user:${user_id}`
 
-    return {
+    // Try to get from cache
+    const cached = await redis.get(cache_key)
+    if (cached) {
+      return JSON.parse(cached) as DiscordUser & { avatar_url: string }
+    }
+
+    // Fetch from Discord API
+    const res = await fetchWithRetry(`${DISCORD_URL}/users/${user_id}`, {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      },
+    })
+    const res_json = (await res.json()) as DiscordUser
+
+    const user_data = {
       ...res_json,
       avatar_url: `https://cdn.discordapp.com/avatars/${user_id}/${res_json.avatar}.png`,
     }
+
+    // Cache the result
+    await redis.setEx(cache_key, CACHE_TTL, JSON.stringify(user_data))
+
+    return user_data
   },
 }
 export type DiscordUser = {

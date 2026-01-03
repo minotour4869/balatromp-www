@@ -8,12 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { auth } from '@/server/auth'
 import { ThemeToggle } from 'fumadocs-ui/components/layout/theme-toggle'
 import type { HomeLayoutProps } from 'fumadocs-ui/layouts/home'
 import type { LinkItemType } from 'fumadocs-ui/layouts/links'
 import { replaceOrDefault } from 'fumadocs-ui/layouts/shared'
-import { LogIn, LogOut, Tv, User } from 'lucide-react'
+import { LogIn, LogOut, Settings, Shield, Tv, User } from 'lucide-react'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Fragment } from 'react'
@@ -37,6 +36,8 @@ export function Header({
 }) {
   const { data: session, status } = useSession()
   const isAuthenticated = status === 'authenticated'
+  const isAdmin = isAuthenticated && session?.user?.role === 'admin'
+  const isOwner = isAuthenticated && session?.user?.role === 'owner'
   const navItems = finalLinks.filter((item) =>
     ['nav', 'all'].includes(item.on ?? 'all')
   )
@@ -59,6 +60,50 @@ export function Header({
           .map((item, i) => (
             <NavbarLinkItem key={i} item={item} className='text-sm' />
           ))}
+        {(isAdmin || isOwner) && (
+          <NavbarMenu>
+            <NavbarMenuTrigger className='text-sm'>
+              <div className='flex items-center gap-1'>
+                <Shield className='h-4 w-4' />
+                <span>Admin</span>
+              </div>
+            </NavbarMenuTrigger>
+            <NavbarMenuContent>
+              {isOwner && (
+                <NavbarMenuLink href='/admin/roles'>
+                  <p className='-mb-1 font-medium text-sm'>Role Manager</p>
+                  <p className='text-[13px] text-fd-muted-foreground'>
+                    Assign roles to users
+                  </p>
+                </NavbarMenuLink>
+              )}
+              <NavbarMenuLink href='/admin/blog'>
+                <p className='-mb-1 font-medium text-sm'>Blog</p>
+                <p className='text-[13px] text-fd-muted-foreground'>
+                  Manage blog posts
+                </p>
+              </NavbarMenuLink>
+              <NavbarMenuLink href='/admin/logs'>
+                <p className='-mb-1 font-medium text-sm'>Logs</p>
+                <p className='text-[13px] text-fd-muted-foreground'>
+                  View and manage logs
+                </p>
+              </NavbarMenuLink>
+              <NavbarMenuLink href='/admin/releases'>
+                <p className='-mb-1 font-medium text-sm'>Releases</p>
+                <p className='text-[13px] text-fd-muted-foreground'>
+                  Manage releases
+                </p>
+              </NavbarMenuLink>
+              <NavbarMenuLink href='/admin/stream/obs-control-panel'>
+                <p className='-mb-1 font-medium text-sm'>OBS Control Panel</p>
+                <p className='text-[13px] text-fd-muted-foreground'>
+                  Stream widget controls
+                </p>
+              </NavbarMenuLink>
+            </NavbarMenuContent>
+          </NavbarMenu>
+        )}
       </ul>
       <div className='flex flex-1 flex-row items-center justify-end gap-1.5'>
         {enableSearch ? (
@@ -104,6 +149,15 @@ export function Header({
                 >
                   <User className='mr-2 h-4 w-4' />
                   <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href='/profile/settings'
+                  className='flex w-full items-center'
+                >
+                  <Settings className='mr-2 h-4 w-4' />
+                  <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -155,6 +209,41 @@ export function Header({
               .map((item, i) => (
                 <MenuLinkItem key={i} item={item} className='sm:hidden' />
               ))}
+            {(isAdmin || isOwner) && (
+              <div className='sm:hidden'>
+                <div className='flex items-center gap-1 px-3 py-2 font-medium'>
+                  <Shield className='h-4 w-4' />
+                  <span>Admin</span>
+                </div>
+                <div className='ml-4 flex flex-col gap-1'>
+                  {isOwner && (
+                    <Link href='/admin/roles' className='px-3 py-1 text-sm'>
+                      Role Manager
+                    </Link>
+                  )}
+                  <Link href='/admin/blog' className='px-3 py-1 text-sm'>
+                    Blog
+                  </Link>
+                  <Link href='/admin/logs' className='px-3 py-1 text-sm'>
+                    Logs
+                  </Link>
+                  <Link href='/admin/releases' className='px-3 py-1 text-sm'>
+                    Releases
+                  </Link>
+                  <Link
+                    href='/admin/stream/obs-control-panel'
+                    className='px-3 py-1 text-sm'
+                  >
+                    OBS Control Panel
+                  </Link>
+                </div>
+              </div>
+            )}
+            <div className='sm:hidden'>
+              <Link href='/blog' className='px-3 py-2 font-medium text-sm'>
+                Blog
+              </Link>
+            </div>
             <div className='-ms-1.5 flex flex-row items-center gap-1.5 max-sm:mt-2'>
               {menuItems.filter(isSecondary).map((item, i) => (
                 <MenuLinkItem key={i} item={item} className='-me-1.5' />

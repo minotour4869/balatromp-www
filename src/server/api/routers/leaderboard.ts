@@ -1,6 +1,11 @@
-import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
+import {
+  adminProcedure,
+  createTRPCRouter,
+  publicProcedure,
+} from '@/server/api/trpc'
+import type { LeaderboardEntry } from '@/server/services/botlatro.service'
 import { LeaderboardService } from '@/server/services/leaderboard'
-import type { LeaderboardEntry } from '@/server/services/neatqueue.service'
+import { SeasonSchema } from '@/shared/seasons'
 import { z } from 'zod'
 const service = new LeaderboardService()
 
@@ -9,28 +14,226 @@ export const leaderboard_router = createTRPCRouter({
     .input(
       z.object({
         channel_id: z.string(),
+        season: SeasonSchema.optional().default('season5'),
+        page: z.number().min(1).optional().default(1),
+        pageSize: z.number().min(1).max(100).optional().default(50),
+        search: z.string().optional(),
+        minGames: z.number().optional(),
+        maxGames: z.number().optional(),
+        sortBy: z
+          .enum([
+            'rank',
+            'mmr',
+            'wins',
+            'losses',
+            'winrate',
+            'totalgames',
+            'streak',
+            'peak_mmr',
+            'peak_streak',
+          ])
+          .optional(),
+        sortOrder: z.enum(['asc', 'desc']).optional(),
       })
     )
     .query(async ({ input }) => {
-      const result = await service.getLeaderboard(input.channel_id)
+      if (input.season === 'season1' || input.season === 'season2' || input.season === 'season4') {
+        // use the snapshot data
+        let seasonData;
+        if (input.season === 'season1') {
+          seasonData = await service.getSeason1Leaderboard(
+              input.channel_id
+          )
+        } else if (input.season === 'season2') {
+          seasonData = await service.getSeason2Leaderboard(
+              input.channel_id
+          )
+        } else {
+          seasonData = await service.getSeason4Leaderboard(
+              input.channel_id
+          )
+        }
+
+        // Apply filtering
+        let filtered = seasonData
+        if (input.search) {
+          const searchLower = input.search.toLowerCase()
+          filtered = filtered.filter((entry) =>
+            entry.name.toLowerCase().includes(searchLower)
+          )
+        }
+        if (input.minGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames >= input.minGames!
+          )
+        }
+        if (input.maxGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames <= input.maxGames!
+          )
+        }
+        // Apply sorting
+        if (input.sortBy) {
+          filtered = [...filtered].sort((a, b) => {
+            const aVal = a[input.sortBy!]
+            const bVal = b[input.sortBy!]
+            const order = input.sortOrder === 'asc' ? 1 : -1
+            return aVal < bVal ? -order : aVal > bVal ? order : 0
+          })
+        }
+        // Apply pagination
+        const total = filtered.length
+        const offset = (input.page - 1) * input.pageSize
+        const paginated = filtered.slice(offset, offset + input.pageSize)
+        return {
+          data: paginated,
+          total,
+          page: input.page,
+          pageSize: input.pageSize,
+          totalPages: Math.ceil(total / input.pageSize),
+          isStale: false,
+        }
+      }
+      if (input.season === 'season3') {
+        // For Season 3, use the DB snapshot data
+        const season3Data = await service.getSeason3Leaderboard(
+          input.channel_id
+        )
+        // Apply filtering
+        let filtered = season3Data
+        if (input.search) {
+          const searchLower = input.search.toLowerCase()
+          filtered = filtered.filter((entry) =>
+            entry.name.toLowerCase().includes(searchLower)
+          )
+        }
+        if (input.minGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames >= input.minGames!
+          )
+        }
+        if (input.maxGames !== undefined) {
+          filtered = filtered.filter(
+            (entry) => entry.totalgames <= input.maxGames!
+          )
+        }
+        // Apply sorting
+        if (input.sortBy) {
+          filtered = [...filtered].sort((a, b) => {
+            const aVal = a[input.sortBy!]
+            const bVal = b[input.sortBy!]
+            const order = input.sortOrder === 'asc' ? 1 : -1
+            return aVal < bVal ? -order : aVal > bVal ? order : 0
+          })
+        }
+        // Apply pagination
+        const total = filtered.length
+        const offset = (input.page - 1) * input.pageSize
+        const paginated = filtered.slice(offset, offset + input.pageSize)
+        return {
+          data: paginated,
+          total,
+          page: input.page,
+          pageSize: input.pageSize,
+          totalPages: Math.ceil(total / input.pageSize),
+          isStale: false,
+        }
+      }
+      // For Season 5 (current) or all, use the current data
+      const result = await service.getLeaderboard(input.channel_id, {
+        page: input.page,
+        pageSize: input.pageSize,
+        search: input.search,
+        minGames: input.minGames,
+        maxGames: input.maxGames,
+        sortBy: input.sortBy,
+        sortOrder: input.sortOrder,
+      })
       return {
         data: result.data as LeaderboardEntry[],
-        isStale: result.isStale
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages,
+        isStale: result.isStale,
       }
+    }),
+  get_leaderboard_snapshots: adminProcedure
+    .input(
+      z.object({
+        channel_id: z.string(),
+        limit: z.number().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return await service.getLeaderboardSnapshots(
+        input.channel_id,
+        input.limit
+      )
     }),
   get_user_rank: publicProcedure
     .input(
       z.object({
         channel_id: z.string(),
         user_id: z.string(),
+        season: SeasonSchema.optional().default('season5'),
       })
     )
     .query(async ({ input }) => {
+      if (input.season === 'season1') {
+        // For Season 2, use the snapshot data
+        const userData = await service.getSeason1UserRank(
+            input.channel_id,
+            input.user_id
+        )
+        if (!userData) return null
+        return {
+          data: userData,
+          isStale: false,
+        }
+      }
+      if (input.season === 'season2') {
+        // For Season 2, use the snapshot data
+        const userData = await service.getSeason2UserRank(
+          input.channel_id,
+          input.user_id
+        )
+        if (!userData) return null
+        return {
+          data: userData,
+          isStale: false,
+        }
+      }
+      if (input.season === 'season3') {
+        // For Season 3, use the DB snapshot data
+        const userData = await service.getSeason3UserRank(
+          input.channel_id,
+          input.user_id
+        )
+        if (!userData) return null
+        return {
+          data: userData,
+          isStale: false,
+        }
+      }
+      if (input.season === 'season4') {
+        // For Season 4, use the snapshot data
+        const userData = await service.getSeason4UserRank(
+            input.channel_id,
+            input.user_id
+        )
+        if (!userData) return null
+        return {
+          data: userData,
+          isStale: false,
+        }
+      }
+      // For Season 5 (current) or all, use the current data
       const result = await service.getUserRank(input.channel_id, input.user_id)
       if (!result) return null
       return {
         data: result.data,
-        isStale: result.isStale
+        isStale: result.isStale,
       }
     }),
 })
